@@ -338,7 +338,7 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
       </motion.div>
     </motion.div>
   )
-  /* c8 ignore end */
+  /* c8 ignore stop */
 }
 
 export default JobForm

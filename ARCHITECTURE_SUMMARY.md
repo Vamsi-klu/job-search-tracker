@@ -133,6 +133,22 @@ npm run preview
 | **AISummary.jsx** | Query interface, summary generation |
 | **ThemeContext.jsx** | Global theme state, persistence |
 
+### ✅ Testing & Coverage Map (Vitest + RTL)
+
+| Module | Tests / Suites | Statements | Branches | Functions | Lines |
+|--------|----------------|------------|----------|-----------|-------|
+| `App.jsx` | Auth ↔ Dashboard integration | 100% | 100% | 100% | 100% |
+| `Auth.jsx` | Account creation, validation, login flows | 94.3% | 95.8% | 100% | 94.3% |
+| `Dashboard.jsx` | Job lifecycle + celebrations + API fallback + modal wiring | 87.6% | 57.1% | 80% | 87.2% |
+| `JobForm.jsx` | Prefill/edit, validation, new-job permutations | 86.2% | 56.1% | 81.8% | 85.2% |
+| `JobCard.jsx` | Recruiter/hiring manager display, status callbacks, delete | 87.5% | 63.8% | 80% | 89.2% |
+| `ActivityLog.jsx` | Empty state, metadata chips, timeline buckets | 97.4% | 66.7% | 88.9% | 97.0% |
+| `AISummary.jsx` | Company summaries, overview, fallback messaging, completion callback | 94.0% | 67.3% | 93.9% | 96.1% |
+| `CelebrationOverlay.jsx` | Success/failure graffiti overlays + timers | 95.0% | 83.3% | 100% | 100% |
+| `ThemeContext.jsx` | Default theme, toggle behavior, hydration | 94.4% | 75% | 100% | 94.1% |
+
+> **Next Steps:** The remaining delta to the 95% goal lives inside highly declarative JSX blocks (dashboard header/stats/grid, job card layout, job form markup). Extracting those sections into pure-presentational subcomponents or augmenting the suites with snapshot-style assertions for every stat/tile would push those files over the threshold without artificially ignoring code.
+
 ### 🔐 Security Status
 
 ⚠️ **Current Implementation: NOT PRODUCTION READY**

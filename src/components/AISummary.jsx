@@ -399,7 +399,7 @@ const AISummary = ({
       </motion.div>
     </motion.div>
   )
-  /* c8 ignore end */
+  /* c8 ignore stop */
 }
 
 export default AISummary

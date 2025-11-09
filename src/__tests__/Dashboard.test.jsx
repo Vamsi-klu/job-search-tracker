@@ -177,10 +177,12 @@ describe('Dashboard component', () => {
     localStorage.setItem('jobTracker_logs', JSON.stringify(localLogs))
 
     logsAPI.getAll.mockRejectedValueOnce(new Error('network'))
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     renderDashboard()
 
     await waitFor(() => expect(logsAPI.getAll).toHaveBeenCalled())
     expect(screen.getByText(/View Activity Logs \(2\)/)).toBeInTheDocument()
+    errorSpy.mockRestore()
   })
 
   it('opens activity log and AI summary modals', async () => {

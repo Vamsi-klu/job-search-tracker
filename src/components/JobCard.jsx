@@ -350,7 +350,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
       )}
     </motion.div>
   )
-  /* c8 ignore end */
+  /* c8 ignore stop */
 }
 
 export default JobCard

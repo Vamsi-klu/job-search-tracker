@@ -534,7 +534,7 @@ const Dashboard = ({ onLogout }) => {
       />
     </div>
   )
-  /* c8 ignore end */
+  /* c8 ignore stop */
 }
 
 export default Dashboard
