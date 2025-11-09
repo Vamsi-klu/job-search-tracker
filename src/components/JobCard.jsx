@@ -1,10 +1,13 @@
-import { motion } from 'framer-motion'
-import { Building2, User, Briefcase, Edit, Trash2, CheckCircle, Circle, Clock } from 'lucide-react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Building2, User, Briefcase, Edit, Trash2, CheckCircle, Circle, Clock, XCircle, PartyPopper } from 'lucide-react'
 
 const statusOptions = ['Not Started', 'In Progress', 'Completed', 'Rejected']
 const roundOptions = ['Not Started', 'Scheduled', 'Completed', 'Passed', 'Failed']
 
 const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
+  const [showAnimation, setShowAnimation] = useState(false)
+  const [animationType, setAnimationType] = useState('success') // 'success' or 'error'
   const getStatusColor = (status) => {
     switch (status) {
       case 'Completed':
@@ -34,6 +37,21 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
     }
   }
 
+  const handleStatusChange = (field, value) => {
+    // Trigger animations based on status value
+    if (value === 'Completed' || value === 'Passed' || value === 'Accepted' || value === 'Offer Extended') {
+      setAnimationType('success')
+      setShowAnimation(true)
+      setTimeout(() => setShowAnimation(false), 2000)
+    } else if (value === 'Rejected' || value === 'Failed' || value === 'Declined') {
+      setAnimationType('error')
+      setShowAnimation(true)
+      setTimeout(() => setShowAnimation(false), 2000)
+    }
+
+    onUpdateStatus(job.id, field, value)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -45,8 +63,49 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
         theme === 'dark' ? 'bg-dark-card' : 'bg-white'
       } rounded-xl p-6 shadow-lg border ${
         theme === 'dark' ? 'border-dark-border' : 'border-light-border'
-      } hover:shadow-xl transition-all`}
+      } hover:shadow-xl transition-all relative overflow-hidden`}
     >
+      {/* Status Change Animation */}
+      <AnimatePresence>
+        {showAnimation && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            className={`absolute inset-0 flex items-center justify-center z-10 ${
+              animationType === 'success'
+                ? 'bg-green-500/20 backdrop-blur-sm'
+                : 'bg-red-500/20 backdrop-blur-sm'
+            } rounded-xl`}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: 180 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            >
+              {animationType === 'success' ? (
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 10, 0] }}
+                  transition={{ duration: 0.5, repeat: 1 }}
+                  className="text-green-500"
+                >
+                  <CheckCircle className="w-24 h-24 drop-shadow-2xl" strokeWidth={3} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ duration: 0.5, repeat: 1 }}
+                  className="text-red-500"
+                >
+                  <XCircle className="w-24 h-24 drop-shadow-2xl" strokeWidth={3} />
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -85,11 +144,19 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
       </div>
 
       {/* Recruiter Info */}
-      <div className={`flex items-center space-x-2 mb-4 ${
+      <div className={`space-y-2 mb-4 ${
         theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
       }`}>
-        <User className="w-4 h-4" />
-        <span>Recruiter: {job.recruiterName}</span>
+        <div className="flex items-center space-x-2">
+          <User className="w-4 h-4" />
+          <span>Recruiter: {job.recruiterName}</span>
+        </div>
+        {job.hiringManager && (
+          <div className="flex items-center space-x-2">
+            <Briefcase className="w-4 h-4" />
+            <span>Hiring Manager: {job.hiringManager}</span>
+          </div>
+        )}
       </div>
 
       {/* Stages */}
@@ -114,7 +181,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
           </div>
           <select
             value={job.recruiterScreen}
-            onChange={(e) => onUpdateStatus(job.id, 'recruiterScreen', e.target.value)}
+            onChange={(e) => handleStatusChange('recruiterScreen', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg text-sm ${
               theme === 'dark'
                 ? 'bg-dark-card text-dark-text border-dark-border'
@@ -147,7 +214,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
           </div>
           <select
             value={job.technicalScreen}
-            onChange={(e) => onUpdateStatus(job.id, 'technicalScreen', e.target.value)}
+            onChange={(e) => handleStatusChange('technicalScreen', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg text-sm ${
               theme === 'dark'
                 ? 'bg-dark-card text-dark-text border-dark-border'
@@ -182,7 +249,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
                 </span>
                 <select
                   value={job[round]}
-                  onChange={(e) => onUpdateStatus(job.id, round, e.target.value)}
+                  onChange={(e) => handleStatusChange(round, e.target.value)}
                   className={`px-2 py-1 rounded text-xs ${
                     theme === 'dark'
                       ? 'bg-dark-card text-dark-text border-dark-border'
@@ -218,7 +285,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
           </div>
           <select
             value={job.decision}
-            onChange={(e) => onUpdateStatus(job.id, 'decision', e.target.value)}
+            onChange={(e) => handleStatusChange('decision', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg text-sm ${
               theme === 'dark'
                 ? 'bg-dark-card text-dark-text border-dark-border'

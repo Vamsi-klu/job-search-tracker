@@ -6,6 +6,7 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
   const [formData, setFormData] = useState(job || {
     company: '',
     recruiterName: '',
+    hiringManager: '',
     position: '',
     recruiterScreen: 'Not Started',
     technicalScreen: 'Not Started',
@@ -111,24 +112,45 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
             </div>
           </div>
 
-          <div>
-            <label className={`block text-sm font-semibold mb-2 ${
-              theme === 'dark' ? 'text-dark-text' : 'text-light-text'
-            }`}>
-              Recruiter Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.recruiterName}
-              onChange={(e) => handleChange('recruiterName', e.target.value)}
-              className={`w-full px-4 py-3 rounded-lg ${
-                theme === 'dark'
-                  ? 'bg-dark-bg text-dark-text border-dark-border'
-                  : 'bg-light-bg text-light-text border-light-border'
-              } border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all`}
-              placeholder="Enter recruiter name"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-semibold mb-2 ${
+                theme === 'dark' ? 'text-dark-text' : 'text-light-text'
+              }`}>
+                Recruiter Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.recruiterName}
+                onChange={(e) => handleChange('recruiterName', e.target.value)}
+                className={`w-full px-4 py-3 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-dark-bg text-dark-text border-dark-border'
+                    : 'bg-light-bg text-light-text border-light-border'
+                } border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all`}
+                placeholder="Enter recruiter name"
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-semibold mb-2 ${
+                theme === 'dark' ? 'text-dark-text' : 'text-light-text'
+              }`}>
+                Hiring Manager
+              </label>
+              <input
+                type="text"
+                value={formData.hiringManager}
+                onChange={(e) => handleChange('hiringManager', e.target.value)}
+                className={`w-full px-4 py-3 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-dark-bg text-dark-text border-dark-border'
+                    : 'bg-light-bg text-light-text border-light-border'
+                } border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all`}
+                placeholder="Enter hiring manager name"
+              />
+            </div>
           </div>
 
           {/* Interview Stages */}

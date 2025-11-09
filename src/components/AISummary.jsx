@@ -21,13 +21,20 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
       )
 
       if (companyMatch) {
-        const companyLogs = logs.filter(log =>
-          log.company.toLowerCase() === companyMatch.company.toLowerCase()
-        )
+        // Filter and sort logs by timestamp (most recent first)
+        const companyLogs = logs
+          .filter(log =>
+            log.company.toLowerCase() === companyMatch.company.toLowerCase()
+          )
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
         let summary = `## Summary for ${companyMatch.company}\n\n`
         summary += `**Position:** ${companyMatch.position}\n`
-        summary += `**Recruiter:** ${companyMatch.recruiterName}\n\n`
+        summary += `**Recruiter:** ${companyMatch.recruiterName}\n`
+        if (companyMatch.hiringManager) {
+          summary += `**Hiring Manager:** ${companyMatch.hiringManager}\n`
+        }
+        summary += `\n`
         summary += `### Current Status\n`
         summary += `- **Recruiter Screen:** ${companyMatch.recruiterScreen}\n`
         summary += `- **Technical Screen:** ${companyMatch.technicalScreen}\n`
@@ -42,8 +49,9 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         }
 
         if (companyLogs.length > 0) {
-          summary += `### Recent Activity (${companyLogs.length} updates)\n\n`
+          summary += `### Latest Activity (${companyLogs.length} total updates)\n\n`
 
+          // Show the 5 most recent logs (already sorted by timestamp descending)
           const recentLogs = companyLogs.slice(0, 5)
           recentLogs.forEach((log, idx) => {
             const date = new Date(log.timestamp).toLocaleDateString('en-US', {
@@ -56,10 +64,10 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
           })
 
           if (companyLogs.length > 5) {
-            summary += `\n*...and ${companyLogs.length - 5} more updates*\n`
+            summary += `\n*...and ${companyLogs.length - 5} older updates*\n`
           }
 
-          // Last update
+          // Most recent update (first in sorted array)
           const lastLog = companyLogs[0]
           const lastUpdateDate = new Date(lastLog.timestamp).toLocaleDateString('en-US', {
             month: 'long',
@@ -68,7 +76,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
             hour: '2-digit',
             minute: '2-digit'
           })
-          summary += `\n### Last Updated\n`
+          summary += `\n### Most Recent Update\n`
           summary += `${lastUpdateDate} by ${lastLog.username}\n`
           summary += `**Action:** ${lastLog.details}`
         } else {
