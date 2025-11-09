@@ -1,4 +1,5 @@
 import { logStore } from '../database.js';
+import logger from '../middleware/logger.js';
 
 // Create a new log entry
 export function createLog(req, res) {
@@ -9,17 +10,19 @@ export function createLog(req, res) {
       jobTitle,
       company,
       details,
-      username,
       jobId,
       recruiterName,
       metadata,
       hiringManager
     } = req.body;
 
+    // Use authenticated username
+    const username = req.user.username;
+
     // Validation
-    if (!timestamp || !action || !username) {
+    if (!timestamp || !action) {
       return res.status(400).json({
-        error: 'Missing required fields: timestamp, action, and username are required'
+        error: 'Missing required fields: timestamp and action are required'
       });
     }
 
@@ -36,13 +39,15 @@ export function createLog(req, res) {
       hiringManager
     });
 
+    logger.info(`Log created by ${username}: ${action}`);
+
     res.status(201).json({
       success: true,
       id: newLogId,
       message: 'Log entry created successfully'
     });
   } catch (error) {
-    console.error('Error creating log:', error);
+    logger.error('Error creating log:', error);
     res.status(500).json({ error: 'Failed to create log entry' });
   }
 }
@@ -53,7 +58,7 @@ export function getLogs(req, res) {
     const filters = {
       action: req.query.action,
       company: req.query.company,
-      username: req.query.username,
+      username: req.user.username, // Filter by authenticated user
       startDate: req.query.startDate,
       endDate: req.query.endDate,
       search: req.query.search,
@@ -71,7 +76,7 @@ export function getLogs(req, res) {
       data: logs
     });
   } catch (error) {
-    console.error('Error fetching logs:', error);
+    logger.error('Error fetching logs:', error);
     res.status(500).json({ error: 'Failed to fetch logs' });
   }
 }
@@ -86,7 +91,7 @@ export function getLogStats(req, res) {
       data: stats
     });
   } catch (error) {
-    console.error('Error fetching log stats:', error);
+    logger.error('Error fetching log stats:', error);
     res.status(500).json({ error: 'Failed to fetch log statistics' });
   }
 }
@@ -101,12 +106,17 @@ export function getLogById(req, res) {
       return res.status(404).json({ error: 'Log not found' });
     }
 
+    // Ensure user can only access their own logs
+    if (log.username !== req.user.username) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     res.json({
       success: true,
       data: log
     });
   } catch (error) {
-    console.error('Error fetching log:', error);
+    logger.error('Error fetching log:', error);
     res.status(500).json({ error: 'Failed to fetch log' });
   }
 }
@@ -115,18 +125,28 @@ export function getLogById(req, res) {
 export function deleteLog(req, res) {
   try {
     const { id } = req.params;
-    const info = logStore.deleteById(parseInt(id, 10));
-
-    if (info.changes === 0) {
+    const logId = parseInt(id, 10);
+    
+    // Check if log exists and belongs to user
+    const log = logStore.getById(logId);
+    if (!log) {
       return res.status(404).json({ error: 'Log not found' });
     }
+    
+    if (log.username !== req.user.username) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    const info = logStore.deleteById(logId);
+
+    logger.info(`Log deleted by ${req.user.username}: ${logId}`);
 
     res.json({
       success: true,
       message: 'Log deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting log:', error);
+    logger.error('Error deleting log:', error);
     res.status(500).json({ error: 'Failed to delete log' });
   }
 }
@@ -135,7 +155,16 @@ export function deleteLog(req, res) {
 export function cleanupOldLogs(req, res) {
   try {
     const { days } = req.params;
-    const info = logStore.deleteOlderThan(parseInt(days, 10));
+    
+    // Validate days parameter
+    const daysNum = parseInt(days, 10);
+    if (isNaN(daysNum) || daysNum < 1) {
+      return res.status(400).json({ error: 'Invalid days parameter' });
+    }
+    
+    const info = logStore.deleteOlderThan(daysNum);
+
+    logger.info(`Cleanup performed by ${req.user.username}: ${info.changes} logs deleted`);
 
     res.json({
       success: true,
@@ -143,7 +172,7 @@ export function cleanupOldLogs(req, res) {
       message: `Deleted ${info.changes} log entries older than ${days} days`
     });
   } catch (error) {
-    console.error('Error cleaning up logs:', error);
+    logger.error('Error cleaning up logs:', error);
     res.status(500).json({ error: 'Failed to cleanup old logs' });
   }
 }
@@ -157,7 +186,15 @@ export function bulkCreateLogs(req, res) {
       return res.status(400).json({ error: 'logs must be an array' });
     }
 
-    const imported = logStore.bulkInsert(logs);
+    // Ensure all logs belong to authenticated user
+    const logsWithUser = logs.map(log => ({
+      ...log,
+      username: req.user.username
+    }));
+
+    const imported = logStore.bulkInsert(logsWithUser);
+
+    logger.info(`Bulk import by ${req.user.username}: ${imported} logs`);
 
     res.json({
       success: true,
@@ -165,7 +202,7 @@ export function bulkCreateLogs(req, res) {
       total: logs.length
     });
   } catch (error) {
-    console.error('Error bulk creating logs:', error);
+    logger.error('Error bulk creating logs:', error);
     res.status(500).json({ error: 'Failed to bulk create logs' });
   }
 }

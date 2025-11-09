@@ -1,9 +1,27 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+// Helper function to get auth headers
+function getAuthHeaders() {
+  const token = localStorage.getItem('jobTracker_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+}
+
 // Helper function to handle API responses
 async function handleResponse(response) {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    
+    // Handle unauthorized errors
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('jobTracker_token');
+      localStorage.removeItem('jobTracker_user');
+      localStorage.removeItem('jobTracker_userId');
+      window.location.reload();
+    }
+    
     throw new Error(error.error || 'Request failed');
   }
   return response.json();
@@ -15,9 +33,7 @@ export const logsAPI = {
   async create(logData) {
     const response = await fetch(`${API_BASE_URL}/logs`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(logData),
     });
     return handleResponse(response);
@@ -33,19 +49,25 @@ export const logsAPI = {
     });
 
     const url = `${API_BASE_URL}/logs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
     return handleResponse(response);
   },
 
   // Get log statistics
   async getStats() {
-    const response = await fetch(`${API_BASE_URL}/logs/stats`);
+    const response = await fetch(`${API_BASE_URL}/logs/stats`, {
+      headers: getAuthHeaders(),
+    });
     return handleResponse(response);
   },
 
   // Get a single log by ID
   async getById(id) {
-    const response = await fetch(`${API_BASE_URL}/logs/${id}`);
+    const response = await fetch(`${API_BASE_URL}/logs/${id}`, {
+      headers: getAuthHeaders(),
+    });
     return handleResponse(response);
   },
 
@@ -53,6 +75,7 @@ export const logsAPI = {
   async delete(id) {
     const response = await fetch(`${API_BASE_URL}/logs/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     return handleResponse(response);
   },
@@ -61,9 +84,7 @@ export const logsAPI = {
   async bulkCreate(logs) {
     const response = await fetch(`${API_BASE_URL}/logs/bulk`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ logs }),
     });
     return handleResponse(response);

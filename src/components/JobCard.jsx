@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Building2, User, Briefcase, Edit, Trash2, CheckCircle, Circle, Clock, FileText } from 'lucide-react'
 
@@ -353,4 +354,4 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
   )
 }
 
-export default JobCard
+export default memo(JobCard)

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Lock, User, Sparkles } from 'lucide-react'
+import { Lock, User, Sparkles, Loader } from 'lucide-react'
+import { authAPI } from '../services/authAPI'
 
 const Auth = ({ onAuthenticated }) => {
   const [username, setUsername] = useState('')
@@ -8,14 +9,9 @@ const Auth = ({ onAuthenticated }) => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isCreatingAccount, setIsCreatingAccount] = useState(false)
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    // Check if this is first time use
-    const storedPassword = localStorage.getItem('jobTracker_password')
-    setIsCreatingAccount(!storedPassword)
-  }, [])
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -24,29 +20,46 @@ const Auth = ({ onAuthenticated }) => {
       return
     }
 
-    if (isCreatingAccount) {
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters')
-        return
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match')
-        return
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters')
+      return
+    }
+
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+      setError('Username must contain only letters and numbers')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    if (isCreatingAccount && password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      let response
+      if (isCreatingAccount) {
+        response = await authAPI.register(username, password)
+      } else {
+        response = await authAPI.login(username, password)
       }
 
-      // Create new account
-      localStorage.setItem('jobTracker_password', password)
-      localStorage.setItem('jobTracker_user', username)
+      // Store token and user info
+      localStorage.setItem('jobTracker_token', response.token)
+      localStorage.setItem('jobTracker_user', response.user.username)
+      localStorage.setItem('jobTracker_userId', response.user.userId)
+
       onAuthenticated()
-    } else {
-      // Authenticate
-      const storedPassword = localStorage.getItem('jobTracker_password')
-      if (password === storedPassword) {
-        localStorage.setItem('jobTracker_user', username)
-        onAuthenticated()
-      } else {
-        setError('Invalid password')
-      }
+    } catch (err) {
+      setError(err.message || 'Authentication failed')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -159,22 +172,38 @@ const Auth = ({ onAuthenticated }) => {
               type="submit"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-white/90 transition-all shadow-lg"
+              disabled={isLoading}
+              className="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-white/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
-              {isCreatingAccount ? 'Create Account' : 'Sign In'}
+              {isLoading ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <span>{isCreatingAccount ? 'Create Account' : 'Sign In'}</span>
+              )}
             </motion.button>
           </form>
 
-          {!isCreatingAccount && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mt-6 text-center text-white/60 text-sm"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-6 text-center"
+          >
+            <button
+              onClick={() => {
+                setIsCreatingAccount(!isCreatingAccount)
+                setError('')
+              }}
+              className="text-white/80 hover:text-white text-sm underline"
             >
-              First time here? Reset your password in local storage
-            </motion.p>
-          )}
+              {isCreatingAccount
+                ? 'Already have an account? Sign in'
+                : "Don't have an account? Create one"}
+            </button>
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>

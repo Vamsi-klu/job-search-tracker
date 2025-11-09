@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
+import ErrorBoundary from './components/ErrorBoundary'
 import { ThemeProvider } from './contexts/ThemeContext'
 
 function App() {
@@ -35,15 +36,17 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <AnimatePresence mode="wait">
-        {!isAuthenticated ? (
-          <Auth key="auth" onAuthenticated={() => setIsAuthenticated(true)} />
-        ) : (
-          <Dashboard key="dashboard" onLogout={handleLogout} />
-        )}
-      </AnimatePresence>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AnimatePresence mode="wait">
+          {!isAuthenticated ? (
+            <Auth key="auth" onAuthenticated={() => setIsAuthenticated(true)} />
+          ) : (
+            <Dashboard key="dashboard" onLogout={handleLogout} />
+          )}
+        </AnimatePresence>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 
