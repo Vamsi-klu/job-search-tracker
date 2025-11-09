@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { act } from 'react'
 import CelebrationOverlay, { getOverlayRoot } from '../components/CelebrationOverlay'
 import { vi } from 'vitest'
@@ -53,6 +53,24 @@ describe('CelebrationOverlay', () => {
     expect(screen.getByText('Application removed')).toBeInTheDocument()
     // thumbs down emoji particles should appear
     expect(screen.getAllByText('😞').length).toBeGreaterThan(0)
+  })
+
+  it('allows manual dismissal via the close button', () => {
+    const onClose = vi.fn()
+    render(
+      <CelebrationOverlay
+        celebration={{
+          type: 'success',
+          title: 'Milestone',
+          message: 'Manual close'
+        }}
+        onClose={onClose}
+        theme="dark"
+      />
+    )
+
+    fireEvent.click(screen.getByLabelText('Dismiss celebration'))
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('uses fallback titles and handles missing portal roots', () => {

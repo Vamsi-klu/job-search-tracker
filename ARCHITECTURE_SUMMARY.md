@@ -135,21 +135,21 @@ npm run preview
 
 ### ✅ Testing & Coverage Map (Vitest + RTL)
 
-Latest `npm run test` (vitest + v8) delivers **98.2% statements / 99.4% branches / 96.5% functions / 98.1% lines** overall with per-file thresholds enforced. Highlights:
+Latest `npm run test` (vitest + v8) delivers **100% statements / 99.6% branches / 100% functions / 100% lines** overall with per-file thresholds enforced. Highlights:
 
 | Module | Focused Scenarios | Statements | Branches | Functions | Lines |
 |--------|------------------|------------|----------|-----------|-------|
 | `App.jsx` | Auth ↔ dashboard hand-off | 100% | 100% | 100% | 100% |
-| `Auth.jsx` | Account creation, validation, login failure/success | 94.1% | 95.5% | 100% | 94.1% |
-| `Dashboard.jsx` | CRUD flow, celebrations (success/failure/notes/AI), API fallback, handler exposure | 95.2% | 100% | 86.5% | 95.1% |
+| `Auth.jsx` | Account creation, username validation, login failure/success | 100% | 100% | 100% | 100% |
+| `Dashboard.jsx` | CRUD flow, celebrations (success/failure/notes/AI), modal open/close hooks, API fallback, handler exposure | 100% | 100% | 100% | 100% |
 | `JobForm.jsx` | Prefill/edit/new, overlay close, light/dark theme | 100% | 100% | 100% | 100% |
 | `JobCard.jsx` | Status pills (all moods + undefined), callbacks, light/dark rendering, notes grids | 100% | 98.7% | 100% | 100% |
 | `ActivityLog.jsx` | Empty + multi-log timelines, metadata chips, overlay dismissal, light/dark | 100% | 100% | 100% | 100% |
 | `AISummary.jsx` | Company + overview queries, quick queries, blank submits, light theme placeholders | 100% | 99.0% | 100% | 100% |
-| `CelebrationOverlay.jsx` | Success/failure graffiti, fallback titles, portal overrides, root probing | 100% | 100% | 100% | 100% |
+| `CelebrationOverlay.jsx` | Success/failure graffiti, fallback titles, portal overrides, manual dismissal | 100% | 100% | 100% | 100% |
 | `ThemeContext.jsx` | Default/toggle/hydration plus misuse guard | 100% | 100% | 100% | 100% |
 
-> **Remaining gap:** Dashboard function coverage sits below 95% because the component still bundles controller logic with significant render glue. Splitting `DashboardView` out further (e.g., stats header, grid, action bar) or migrating handler-heavy logic into dedicated hooks will make it easier to unit-test the smaller functions individually.
+> **Remaining gap:** The only sub-100 branch readings (<1%) come from pure-presentational select trees in `JobCard.jsx` (98.7%) and optional-note parsing inside `AISummary.jsx` (99.0%), where c8 still counts declarative JSX even after exhaustive interaction tests.
 
 ### 🔐 Security Status
 

@@ -204,7 +204,7 @@ const Dashboard = ({ onLogout, onHandlersReady }) => {
 
   const handleEditJob = (job) => {
     setEditingJob(job)
-    setShowJobForm(true)
+    setShowJobForm(Boolean(job))
   }
 
   const handleDeleteJob = (jobId) => {
@@ -380,6 +380,7 @@ const DashboardView = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowAISummary(true)}
+                aria-label="Open AI summary"
                 className={`p-2 rounded-lg ${
                   theme === 'dark'
                     ? 'bg-purple-600 hover:bg-purple-700'
@@ -561,10 +562,7 @@ const DashboardView = ({
             key="job-form"
             job={editingJob}
             onSave={handleAddJob}
-            onClose={() => {
-              setShowJobForm(false)
-              handleEditJob(null)
-            }}
+            onClose={() => handleEditJob(null)}
             theme={theme}
           />
         )}

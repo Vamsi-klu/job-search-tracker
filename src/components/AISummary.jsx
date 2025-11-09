@@ -219,6 +219,7 @@ const AISummary = ({
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
+      data-testid="ai-summary-overlay"
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
@@ -247,6 +248,7 @@ const AISummary = ({
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             onClick={onClose}
+            aria-label="Close AI summary"
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
           >
             <X className="text-white" />

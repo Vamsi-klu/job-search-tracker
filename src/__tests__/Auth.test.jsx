@@ -62,4 +62,12 @@ describe('Auth component', () => {
     expect(localStorage.getItem('jobTracker_user')).toBe('jordan')
     expect(onAuthenticated).toHaveBeenCalled()
   })
+
+  it('prevents submission when username is missing', async () => {
+    const user = userEvent.setup()
+    render(<Auth onAuthenticated={() => {}} />)
+
+    await user.click(screen.getByRole('button', { name: /Create Account/i }))
+    expect(screen.getByText('Please enter a username')).toBeInTheDocument()
+  })
 })

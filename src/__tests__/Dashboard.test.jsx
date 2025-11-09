@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import Dashboard from '../components/Dashboard'
@@ -74,6 +74,8 @@ describe('Dashboard component', () => {
     await user.selectOptions(decisionSelect, 'Accepted')
 
     expect(await screen.findByText('Milestone Reached')).toBeInTheDocument()
+    await user.click(screen.getByLabelText('Dismiss celebration'))
+    await waitFor(() => expect(screen.queryByText('Milestone Reached')).toBeNull())
   })
 
   it('renders correctly in light theme', async () => {
@@ -412,6 +414,72 @@ describe('Dashboard component', () => {
     await waitFor(() => expect(logsAPI.create).toHaveBeenCalled())
     expect(screen.queryByText('Milestone Reached')).not.toBeInTheDocument()
     expect(screen.queryByText('Needs Attention')).not.toBeInTheDocument()
+  })
+
+  it('closes the job form when cancel is pressed', async () => {
+    localStorage.setItem('jobTracker_jobs', JSON.stringify([]))
+    const user = userEvent.setup()
+    renderDashboard()
+    await waitFor(() => expect(logsAPI.getAll).toHaveBeenCalled())
+
+    await user.click(screen.getByText('Add New Job'))
+    expect(screen.getByTestId('job-form-modal')).toBeInTheDocument()
+    await user.click(screen.getByText('Cancel'))
+    await waitFor(() => expect(screen.queryByTestId('job-form-modal')).toBeNull())
+  })
+
+  it('closes the activity log modal via overlay click', async () => {
+    localStorage.setItem('jobTracker_jobs', JSON.stringify([]))
+    const user = userEvent.setup()
+    renderDashboard()
+    await waitFor(() => expect(logsAPI.getAll).toHaveBeenCalled())
+
+    await user.click(screen.getByText(/View Activity Logs/))
+    expect(screen.getByTestId('activity-log-modal')).toBeInTheDocument()
+    await user.click(screen.getByTestId('activity-log-overlay'))
+    await waitFor(() => expect(screen.queryByTestId('activity-log-modal')).toBeNull())
+  })
+
+  it('closes the AI summary modal through its close button', async () => {
+    localStorage.setItem('jobTracker_jobs', JSON.stringify([]))
+    const user = userEvent.setup()
+    renderDashboard()
+    await waitFor(() => expect(logsAPI.getAll).toHaveBeenCalled())
+
+    await user.click(screen.getByLabelText('Open AI summary'))
+    expect(screen.getByTestId('ai-summary-overlay')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Close AI summary'))
+    await waitFor(() => expect(screen.queryByTestId('ai-summary-overlay')).toBeNull())
+  })
+
+  it('shows celebration after AI summary finishes generating output', async () => {
+    const storedJob = {
+      id: 20,
+      company: 'Lambda',
+      position: 'Architect',
+      recruiterName: 'Dana',
+      hiringManager: 'June',
+      recruiterScreen: 'Completed',
+      technicalScreen: 'Completed',
+      onsiteRound1: 'Passed',
+      onsiteRound2: 'Passed',
+      onsiteRound3: 'Not Started',
+      onsiteRound4: 'Not Started',
+      decision: 'Pending',
+      notes: 'Initial summary notes',
+      hiringManagerNotes: ''
+    }
+    localStorage.setItem('jobTracker_jobs', JSON.stringify([storedJob]))
+    const user = userEvent.setup()
+    renderDashboard()
+    await waitFor(() => expect(logsAPI.getAll).toHaveBeenCalled())
+
+    await user.click(screen.getByLabelText('Open AI summary'))
+    await user.type(screen.getByPlaceholderText('Ask about a company or get a summary...'), 'Lambda')
+    await user.click(screen.getByRole('button', { name: /submit summary query/i }))
+
+    expect(await screen.findByText('Summary Generated')).toBeInTheDocument()
+    await user.click(screen.getByLabelText('Dismiss celebration'))
   })
 
   it('keeps other jobs intact when editing one entry', async () => {
