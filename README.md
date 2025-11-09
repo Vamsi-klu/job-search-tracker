@@ -49,25 +49,63 @@ Track your job applications with detailed fields:
 
 ## 🛠️ Tech Stack
 
+### Frontend
 - **React 18** - UI framework
 - **Vite** - Build tool
 - **Tailwind CSS** - Styling
 - **Framer Motion** - Animations
 - **Lucide React** - Icons
-- **LocalStorage** - Data persistence
+
+### Backend
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **SQLite** - Database for logs
+- **better-sqlite3** - SQLite library
+- **CORS** - Cross-origin resource sharing
 
 ## 🚀 Getting Started
 
 ### Installation
 
+#### Quick Install (Recommended)
 ```bash
-# Install dependencies
+# Install all dependencies (frontend + backend)
+npm run install:all
+```
+
+#### Manual Install
+```bash
+# Install frontend dependencies
 npm install
 
-# Start development server
+# Install backend dependencies
+cd server && npm install
+```
+
+### Running the Application
+
+#### Run Everything (Recommended)
+```bash
+# Start both frontend and backend together
+npm run dev:all
+```
+
+This will start:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
+
+#### Run Separately
+```bash
+# Frontend only
 npm run dev
 
-# Build for production
+# Backend only (from root directory)
+npm run server:dev
+```
+
+#### Production Build
+```bash
+# Build frontend for production
 npm run build
 
 # Preview production build
@@ -133,12 +171,146 @@ npm run preview
 
 ## 💾 Data Storage
 
-All data is stored locally in your browser's localStorage:
+- **Jobs**: Stored in browser's localStorage
+- **Activity Logs**: Stored in SQLite database via backend API
+- **User Data**: Stored in localStorage (password, username, theme)
+
+LocalStorage keys:
 - `jobTracker_password` - Your password
 - `jobTracker_user` - Your username
 - `jobTracker_jobs` - All job applications
-- `jobTracker_logs` - Activity logs
 - `jobTracker_theme` - Theme preference
+
+## 🔌 API Documentation
+
+### Base URL
+```
+http://localhost:3001/api
+```
+
+### Environment Variables
+
+#### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:3001/api
+```
+
+#### Backend (server/.env)
+```env
+PORT=3001
+CORS_ORIGIN=http://localhost:5173
+NODE_ENV=development
+```
+
+### Endpoints
+
+#### Health Check
+```
+GET /health
+```
+Returns server health status and uptime.
+
+#### Create Log Entry
+```http
+POST /api/logs
+Content-Type: application/json
+
+{
+  "timestamp": "2025-11-09T10:30:00.000Z",
+  "action": "created",
+  "jobTitle": "Software Engineer",
+  "company": "Tech Corp",
+  "details": "New job application added",
+  "username": "john_doe"
+}
+```
+
+#### Get All Logs
+```http
+GET /api/logs
+```
+
+#### Query Logs with Filters
+```http
+# Filter by action
+GET /api/logs?action=created
+
+# Filter by company
+GET /api/logs?company=Tech Corp
+
+# Search logs
+GET /api/logs?search=engineer
+
+# Get recent activity (last 7 days)
+GET /api/logs?days=7
+
+# Pagination
+GET /api/logs?limit=20&offset=0
+```
+
+#### Get Log Statistics
+```http
+GET /api/logs/stats
+```
+
+#### Get Single Log
+```http
+GET /api/logs/:id
+```
+
+#### Delete Log
+```http
+DELETE /api/logs/:id
+```
+
+#### Bulk Create Logs
+```http
+POST /api/logs/bulk
+Content-Type: application/json
+
+{
+  "logs": [...]
+}
+```
+
+### Database Schema
+
+**Logs Table:**
+- `id` (INTEGER, PRIMARY KEY)
+- `timestamp` (TEXT, ISO format)
+- `action` (TEXT: created, updated, deleted, status_update)
+- `job_title` (TEXT)
+- `company` (TEXT)
+- `details` (TEXT)
+- `username` (TEXT)
+- `created_at` (TEXT, auto-generated)
+
+**Indexes:**
+- timestamp, action, company, username, created_at
+
+### JavaScript API Usage
+
+```javascript
+import { logsAPI } from './services/api';
+
+// Create log
+await logsAPI.create({
+  timestamp: new Date().toISOString(),
+  action: 'created',
+  jobTitle: 'Developer',
+  company: 'Tech Corp',
+  details: 'New application',
+  username: 'john_doe'
+});
+
+// Get all logs
+const logs = await logsAPI.getAll();
+
+// Query logs
+const filtered = await logsAPI.getByAction('created');
+const recent = await logsAPI.getRecent(7);
+const stats = await logsAPI.getStats();
+```
 
 ## 🔒 Security Note
 

@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "cd server && npm start",
+    "server:dev": "cd server && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server:dev\" --names \"frontend,backend\" --prefix-colors \"cyan,magenta\"",
+    "install:all": "npm install && cd server && npm install"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -19,6 +23,7 @@
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.2.0",
     "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
     "vite": "^5.0.0"
