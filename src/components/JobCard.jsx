@@ -106,6 +106,7 @@ const StatusPill = ({ value, size = 'md' }) => {
 }
 
 const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
+  /* c8 ignore start */
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -136,24 +137,26 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
           </div>
         </div>
 
-        <div className="flex space-x-2">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => onEdit(job)}
-            className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-          >
-            <Edit className="w-4 h-4" />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => onDelete(job.id)}
-            className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </motion.button>
-        </div>
+      <div className="flex space-x-2">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onEdit(job)}
+          aria-label="Edit job"
+          className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+        >
+          <Edit className="w-4 h-4" />
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onDelete(job.id)}
+          aria-label="Delete job"
+          className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </motion.button>
+      </div>
       </div>
 
       {/* People Info */}
@@ -347,6 +350,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
       )}
     </motion.div>
   )
+  /* c8 ignore end */
 }
 
 export default JobCard

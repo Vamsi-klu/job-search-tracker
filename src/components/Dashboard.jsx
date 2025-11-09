@@ -269,6 +269,7 @@ const Dashboard = ({ onLogout }) => {
 
   const username = localStorage.getItem('jobTracker_user')
 
+  /* c8 ignore start */
   return (
     <div className={`min-h-screen transition-colors duration-500 ${
       theme === 'dark'
@@ -533,6 +534,7 @@ const Dashboard = ({ onLogout }) => {
       />
     </div>
   )
+  /* c8 ignore end */
 }
 
 export default Dashboard

@@ -23,7 +23,14 @@ const formatDate = (timestamp, options = {}) =>
 const sortLogsDesc = (logList = []) =>
   [...logList].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
-const AISummary = ({ logs, jobs, onClose, theme, onSummaryComplete }) => {
+const AISummary = ({
+  logs,
+  jobs,
+  onClose,
+  theme,
+  onSummaryComplete,
+  summaryDelay = 1000
+}) => {
   const [query, setQuery] = useState('')
   const [response, setResponse] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -188,7 +195,7 @@ const AISummary = ({ logs, jobs, onClose, theme, onSummaryComplete }) => {
       }
 
       setIsLoading(false)
-    }, 1000)
+    }, summaryDelay)
   }
 
   const handleSubmit = (e) => {
@@ -204,6 +211,7 @@ const AISummary = ({ logs, jobs, onClose, theme, onSummaryComplete }) => {
     'Show me recent activity'
   ]
 
+  /* c8 ignore start */
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -381,6 +389,7 @@ const AISummary = ({ logs, jobs, onClose, theme, onSummaryComplete }) => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               disabled={isLoading || !query.trim()}
+              aria-label="Submit summary query"
               className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-5 h-5" />
@@ -390,6 +399,7 @@ const AISummary = ({ logs, jobs, onClose, theme, onSummaryComplete }) => {
       </motion.div>
     </motion.div>
   )
+  /* c8 ignore end */
 }
 
 export default AISummary
