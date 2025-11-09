@@ -6,6 +6,7 @@ import JobCard from './JobCard'
 import JobForm from './JobForm'
 import ActivityLog from './ActivityLog'
 import AISummary from './AISummary'
+import { logsAPI } from '../services/api'
 
 const Dashboard = ({ onLogout }) => {
   const { theme, toggleTheme } = useTheme()
@@ -18,26 +19,39 @@ const Dashboard = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    // Load jobs and logs from localStorage
+    // Load jobs from localStorage
     const savedJobs = localStorage.getItem('jobTracker_jobs')
-    const savedLogs = localStorage.getItem('jobTracker_logs')
-
     if (savedJobs) {
       setJobs(JSON.parse(savedJobs))
     }
-    if (savedLogs) {
-      setActivityLogs(JSON.parse(savedLogs))
-    }
+
+    // Load logs from backend API
+    loadLogsFromAPI()
   }, [])
+
+  const loadLogsFromAPI = async () => {
+    try {
+      const response = await logsAPI.getAll()
+      if (response.success && response.data) {
+        setActivityLogs(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to load logs from API, using localStorage fallback:', error)
+      // Fallback to localStorage if API fails
+      const savedLogs = localStorage.getItem('jobTracker_logs')
+      if (savedLogs) {
+        setActivityLogs(JSON.parse(savedLogs))
+      }
+    }
+  }
 
   const saveJobs = (newJobs) => {
     setJobs(newJobs)
     localStorage.setItem('jobTracker_jobs', JSON.stringify(newJobs))
   }
 
-  const addLog = (action, jobTitle, company, details) => {
-    const newLog = {
-      id: Date.now(),
+  const addLog = async (action, jobTitle, company, details) => {
+    const logData = {
       timestamp: new Date().toISOString(),
       action,
       jobTitle,
@@ -45,9 +59,23 @@ const Dashboard = ({ onLogout }) => {
       details,
       username: localStorage.getItem('jobTracker_user')
     }
-    const newLogs = [newLog, ...activityLogs]
-    setActivityLogs(newLogs)
-    localStorage.setItem('jobTracker_logs', JSON.stringify(newLogs))
+
+    try {
+      // Save to backend API
+      await logsAPI.create(logData)
+      // Reload logs from API to get the latest data with ID
+      await loadLogsFromAPI()
+    } catch (error) {
+      console.error('Failed to save log to API, using localStorage fallback:', error)
+      // Fallback to localStorage if API fails
+      const newLog = {
+        id: Date.now(),
+        ...logData
+      }
+      const newLogs = [newLog, ...activityLogs]
+      setActivityLogs(newLogs)
+      localStorage.setItem('jobTracker_logs', JSON.stringify(newLogs))
+    }
   }
 
   const handleAddJob = (jobData) => {
