@@ -8,6 +8,32 @@ import ActivityLog from './ActivityLog'
 import AISummary from './AISummary'
 import { logsAPI } from '../services/api'
 
+const jobTemplate = {
+  company: '',
+  position: '',
+  recruiterName: '',
+  hiringManager: '',
+  recruiterScreen: 'Not Started',
+  technicalScreen: 'Not Started',
+  onsiteRound1: 'Not Started',
+  onsiteRound2: 'Not Started',
+  onsiteRound3: 'Not Started',
+  onsiteRound4: 'Not Started',
+  decision: 'Pending',
+  notes: '',
+  hiringManagerNotes: ''
+}
+
+const normalizeJob = (job = {}) => ({
+  ...jobTemplate,
+  ...job
+})
+
+const humanizeField = (field) =>
+  field
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (char) => char.toUpperCase())
+
 const Dashboard = ({ onLogout }) => {
   const { theme, toggleTheme } = useTheme()
   const [jobs, setJobs] = useState([])
@@ -22,7 +48,9 @@ const Dashboard = ({ onLogout }) => {
     // Load jobs from localStorage
     const savedJobs = localStorage.getItem('jobTracker_jobs')
     if (savedJobs) {
-      setJobs(JSON.parse(savedJobs))
+      const parsed = JSON.parse(savedJobs).map(normalizeJob)
+      setJobs(parsed)
+      localStorage.setItem('jobTracker_jobs', JSON.stringify(parsed))
     }
 
     // Load logs from backend API
@@ -33,31 +61,43 @@ const Dashboard = ({ onLogout }) => {
     try {
       const response = await logsAPI.getAll()
       if (response.success && response.data) {
-        setActivityLogs(response.data)
+        const sortedLogs = [...response.data].sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        )
+        setActivityLogs(sortedLogs)
       }
     } catch (error) {
       console.error('Failed to load logs from API, using localStorage fallback:', error)
       // Fallback to localStorage if API fails
       const savedLogs = localStorage.getItem('jobTracker_logs')
       if (savedLogs) {
-        setActivityLogs(JSON.parse(savedLogs))
+        const parsedLogs = JSON.parse(savedLogs).sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        )
+        setActivityLogs(parsedLogs)
       }
     }
   }
 
   const saveJobs = (newJobs) => {
-    setJobs(newJobs)
-    localStorage.setItem('jobTracker_jobs', JSON.stringify(newJobs))
+    const normalizedList = newJobs.map(normalizeJob)
+    setJobs(normalizedList)
+    localStorage.setItem('jobTracker_jobs', JSON.stringify(normalizedList))
   }
 
-  const addLog = async (action, jobTitle, company, details) => {
+  const addLog = async ({ action, job, details, metadata }) => {
+    const username = localStorage.getItem('jobTracker_user')
     const logData = {
       timestamp: new Date().toISOString(),
       action,
-      jobTitle,
-      company,
+      jobId: job?.id,
+      jobTitle: job?.position,
+      company: job?.company,
+      recruiterName: job?.recruiterName,
+      hiringManager: job?.hiringManager,
       details,
-      username: localStorage.getItem('jobTracker_user')
+      metadata,
+      username
     }
 
     try {
@@ -72,23 +112,73 @@ const Dashboard = ({ onLogout }) => {
         id: Date.now(),
         ...logData
       }
-      const newLogs = [newLog, ...activityLogs]
-      setActivityLogs(newLogs)
-      localStorage.setItem('jobTracker_logs', JSON.stringify(newLogs))
+      setActivityLogs(prev => {
+        const updated = [newLog, ...prev]
+        localStorage.setItem('jobTracker_logs', JSON.stringify(updated))
+        return updated
+      })
     }
   }
 
   const handleAddJob = (jobData) => {
+    const normalizedData = normalizeJob(jobData)
+
     if (editingJob) {
+      const mergedJob = { ...editingJob, ...normalizedData }
       const updatedJobs = jobs.map(job =>
-        job.id === editingJob.id ? { ...jobData, id: job.id } : job
+        job.id === editingJob.id ? mergedJob : job
       )
       saveJobs(updatedJobs)
-      addLog('updated', jobData.position, jobData.company, 'Job details updated')
+
+      const trackedFields = [
+        'company',
+        'position',
+        'recruiterName',
+        'hiringManager',
+        'notes',
+        'hiringManagerNotes'
+      ]
+
+      const changedFields = trackedFields.filter(
+        (field) => (editingJob[field] || '') !== (mergedJob[field] || '')
+      )
+
+      const metadata =
+        changedFields.length > 0
+          ? changedFields.reduce((acc, field) => {
+              acc[field] = mergedJob[field]
+              return acc
+            }, {})
+          : undefined
+
+      const details =
+        changedFields.length > 0
+          ? `Updated ${changedFields.map(humanizeField).join(', ')}`
+          : 'Job details updated'
+
+      addLog({
+        action: 'updated',
+        job: mergedJob,
+        details,
+        metadata
+      })
     } else {
-      const newJob = { ...jobData, id: Date.now(), createdAt: new Date().toISOString() }
+      const newJob = {
+        ...normalizedData,
+        id: Date.now(),
+        createdAt: new Date().toISOString()
+      }
       saveJobs([...jobs, newJob])
-      addLog('created', jobData.position, jobData.company, 'New job application added')
+      addLog({
+        action: 'created',
+        job: newJob,
+        details: 'New job application added',
+        metadata: {
+          position: newJob.position,
+          recruiterName: newJob.recruiterName,
+          hiringManager: newJob.hiringManager
+        }
+      })
     }
     setShowJobForm(false)
     setEditingJob(null)
@@ -104,26 +194,49 @@ const Dashboard = ({ onLogout }) => {
     const updatedJobs = jobs.filter(j => j.id !== jobId)
     saveJobs(updatedJobs)
     if (job) {
-      addLog('deleted', job.position, job.company, 'Job application removed')
+      addLog({
+        action: 'deleted',
+        job,
+        details: 'Job application removed',
+        metadata: {
+          company: job.company,
+          position: job.position
+        }
+      })
     }
   }
 
   const handleUpdateJobStatus = (jobId, field, value) => {
-    const job = jobs.find(j => j.id === jobId)
     const updatedJobs = jobs.map(j =>
       j.id === jobId ? { ...j, [field]: value } : j
     )
     saveJobs(updatedJobs)
-    if (job) {
-      addLog('status_update', job.position, job.company, `${field} updated to: ${value}`)
+    const updatedJob = updatedJobs.find(j => j.id === jobId)
+    if (updatedJob) {
+      addLog({
+        action: 'status_update',
+        job: updatedJob,
+        details: `${humanizeField(field)} updated to: ${value}`,
+        metadata: { field, value }
+      })
     }
   }
 
-  const filteredJobs = jobs.filter(job =>
-    job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.recruiterName.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredJobs = normalizedQuery
+    ? jobs.filter(job =>
+        [
+          job.company,
+          job.position,
+          job.recruiterName,
+          job.hiringManager,
+          job.notes,
+          job.hiringManagerNotes
+        ]
+          .filter(Boolean)
+          .some(value => value.toLowerCase().includes(normalizedQuery))
+      )
+    : jobs
 
   const username = localStorage.getItem('jobTracker_user')
 

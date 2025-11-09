@@ -1,9 +1,20 @@
-import { logOperations } from '../database.js';
+import { logStore } from '../database.js';
 
 // Create a new log entry
 export function createLog(req, res) {
   try {
-    const { timestamp, action, jobTitle, company, details, username } = req.body;
+    const {
+      timestamp,
+      action,
+      jobTitle,
+      company,
+      details,
+      username,
+      jobId,
+      recruiterName,
+      metadata,
+      hiringManager
+    } = req.body;
 
     // Validation
     if (!timestamp || !action || !username) {
@@ -12,18 +23,22 @@ export function createLog(req, res) {
       });
     }
 
-    const info = logOperations.create.run({
+    const newLogId = logStore.createLog({
       timestamp,
       action,
-      jobTitle: jobTitle || null,
-      company: company || null,
-      details: details || null,
-      username
+      jobTitle,
+      company,
+      details,
+      username,
+      jobId,
+      recruiterName,
+      metadata,
+      hiringManager
     });
 
     res.status(201).json({
       success: true,
-      id: info.lastInsertRowid,
+      id: newLogId,
       message: 'Log entry created successfully'
     });
   } catch (error) {
@@ -35,55 +50,20 @@ export function createLog(req, res) {
 // Get all logs or filter by query parameters
 export function getLogs(req, res) {
   try {
-    const {
-      action,
-      company,
-      username,
-      startDate,
-      endDate,
-      search,
-      days,
-      limit,
-      offset
-    } = req.query;
+    const filters = {
+      action: req.query.action,
+      company: req.query.company,
+      username: req.query.username,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      search: req.query.search,
+      days: req.query.days,
+      limit: req.query.limit,
+      offset: req.query.offset,
+      jobId: req.query.jobId
+    };
 
-    let logs;
-
-    // Filter by action
-    if (action) {
-      logs = logOperations.getByAction.all({ action });
-    }
-    // Filter by company
-    else if (company) {
-      logs = logOperations.getByCompany.all({ company: `%${company}%` });
-    }
-    // Filter by username
-    else if (username) {
-      logs = logOperations.getByUsername.all({ username });
-    }
-    // Filter by date range
-    else if (startDate && endDate) {
-      logs = logOperations.getByDateRange.all({ startDate, endDate });
-    }
-    // Search by keyword
-    else if (search) {
-      logs = logOperations.search.all({ keyword: `%${search}%` });
-    }
-    // Get recent activity (last N days)
-    else if (days) {
-      logs = logOperations.getRecentActivity.all({ days: `-${days}` });
-    }
-    // Pagination
-    else if (limit) {
-      logs = logOperations.getPaginated.all({
-        limit: parseInt(limit),
-        offset: parseInt(offset) || 0
-      });
-    }
-    // Get all logs
-    else {
-      logs = logOperations.getAll.all();
-    }
+    const logs = logStore.queryLogs(filters);
 
     res.json({
       success: true,
@@ -99,7 +79,7 @@ export function getLogs(req, res) {
 // Get log statistics
 export function getLogStats(req, res) {
   try {
-    const stats = logOperations.getStats.all();
+    const stats = logStore.getStats();
 
     res.json({
       success: true,
@@ -115,7 +95,7 @@ export function getLogStats(req, res) {
 export function getLogById(req, res) {
   try {
     const { id } = req.params;
-    const log = logOperations.getById.get({ id: parseInt(id) });
+    const log = logStore.getById(parseInt(id, 10));
 
     if (!log) {
       return res.status(404).json({ error: 'Log not found' });
@@ -135,7 +115,7 @@ export function getLogById(req, res) {
 export function deleteLog(req, res) {
   try {
     const { id } = req.params;
-    const info = logOperations.deleteById.run({ id: parseInt(id) });
+    const info = logStore.deleteById(parseInt(id, 10));
 
     if (info.changes === 0) {
       return res.status(404).json({ error: 'Log not found' });
@@ -155,7 +135,7 @@ export function deleteLog(req, res) {
 export function cleanupOldLogs(req, res) {
   try {
     const { days } = req.params;
-    const info = logOperations.deleteOlderThan.run({ days: `-${days}` });
+    const info = logStore.deleteOlderThan(parseInt(days, 10));
 
     res.json({
       success: true,
@@ -177,30 +157,12 @@ export function bulkCreateLogs(req, res) {
       return res.status(400).json({ error: 'logs must be an array' });
     }
 
-    let successCount = 0;
-    let errors = [];
-
-    logs.forEach((log, index) => {
-      try {
-        logOperations.create.run({
-          timestamp: log.timestamp,
-          action: log.action,
-          jobTitle: log.jobTitle || null,
-          company: log.company || null,
-          details: log.details || null,
-          username: log.username
-        });
-        successCount++;
-      } catch (error) {
-        errors.push({ index, error: error.message });
-      }
-    });
+    const imported = logStore.bulkInsert(logs);
 
     res.json({
       success: true,
-      imported: successCount,
-      total: logs.length,
-      errors: errors.length > 0 ? errors : undefined
+      imported,
+      total: logs.length
     });
   } catch (error) {
     console.error('Error bulk creating logs:', error);

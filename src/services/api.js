@@ -99,6 +99,11 @@ export const logsAPI = {
     return this.getAll({ username });
   },
 
+  // Get logs for a single job
+  async getByJob(jobId) {
+    return this.getAll({ jobId });
+  },
+
   // Get logs by date range
   async getByDateRange(startDate, endDate) {
     return this.getAll({ startDate, endDate });

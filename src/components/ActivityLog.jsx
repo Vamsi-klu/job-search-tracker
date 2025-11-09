@@ -155,6 +155,25 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
                           }`}>
                             {log.details}
                           </p>
+                          {log.metadata && (
+                            <div className={`mt-2 text-xs flex flex-wrap gap-2 ${
+                              theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+                            }`}>
+                              {Object.entries(log.metadata).map(([key, value]) => (
+                                <span
+                                  key={key}
+                                  className={`px-2 py-0.5 rounded-full ${
+                                    theme === 'dark' ? 'bg-dark-card' : 'bg-white/70'
+                                  } border ${
+                                    theme === 'dark' ? 'border-dark-border' : 'border-light-border'
+                                  } text-left break-words`}
+                                >
+                                  <strong className="mr-1">{key}:</strong>
+                                  {String(value)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <span className={`text-xs ${
                           theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'

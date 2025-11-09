@@ -1,39 +1,111 @@
-import { motion } from 'framer-motion'
-import { Building2, User, Briefcase, Edit, Trash2, CheckCircle, Circle, Clock } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Building2, User, Briefcase, Edit, Trash2, CheckCircle, Circle, Clock, FileText } from 'lucide-react'
 
 const statusOptions = ['Not Started', 'In Progress', 'Completed', 'Rejected']
 const roundOptions = ['Not Started', 'Scheduled', 'Completed', 'Passed', 'Failed']
 
+const successStates = new Set(['Completed', 'Passed', 'Offer Extended', 'Accepted'])
+const dangerStates = new Set(['Rejected', 'Failed', 'Declined'])
+const progressStates = new Set(['In Progress', 'Scheduled', 'Pending', 'Offer Extended'])
+
+const statusClasses = {
+  success: 'text-green-600 border-green-500/40 bg-green-500/10 shadow-[0_0_18px_rgba(34,197,94,0.2)]',
+  danger: 'text-red-600 border-red-500/40 bg-red-500/10 shadow-[0_0_16px_rgba(239,68,68,0.25)]',
+  progress: 'text-amber-600 border-amber-500/40 bg-amber-500/10',
+  neutral: 'text-slate-500 border-slate-500/30 bg-slate-500/10'
+}
+
+const statusMotionMap = {
+  success: {
+    animateExtras: {
+      scale: [0.95, 1.1, 1],
+      boxShadow: [
+        '0 0 0 rgba(34,197,94,0)',
+        '0 0 25px rgba(34,197,94,0.35)',
+        '0 0 0 rgba(34,197,94,0)'
+      ]
+    },
+    transition: { duration: 0.9 }
+  },
+  danger: {
+    animateExtras: {
+      x: [0, -4, 4, -2, 2, 0]
+    },
+    transition: { duration: 0.6 }
+  },
+  progress: {
+    animateExtras: {
+      opacity: [1, 0.6, 1]
+    },
+    transition: { duration: 0.9 }
+  },
+  neutral: {
+    animateExtras: {},
+    transition: { duration: 0.4 }
+  }
+}
+
+const getStatusMood = (status = '') => {
+  if (successStates.has(status)) return 'success'
+  if (dangerStates.has(status)) return 'danger'
+  if (progressStates.has(status)) return 'progress'
+  return 'neutral'
+}
+
+const renderStatusIcon = (status) => {
+  switch (status) {
+    case 'Completed':
+    case 'Passed':
+    case 'Accepted':
+    case 'Offer Extended':
+      return <CheckCircle className="w-4 h-4" />
+    case 'In Progress':
+    case 'Scheduled':
+    case 'Pending':
+      return <Clock className="w-4 h-4" />
+    case 'Rejected':
+    case 'Failed':
+    case 'Declined':
+      return <Circle className="w-4 h-4" />
+    default:
+      return <Circle className="w-4 h-4" />
+  }
+}
+
+const StatusPill = ({ value, size = 'md' }) => {
+  const mood = getStatusMood(value)
+  const classes = statusClasses[mood]
+  const motionConfig = statusMotionMap[mood]
+  const sizeClasses =
+    size === 'sm'
+      ? 'px-2 py-0.5 text-[11px]'
+      : 'px-3 py-1 text-xs'
+  return (
+    <AnimatePresence mode="wait">
+      <motion.span
+        key={value || 'unknown'}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{
+          scale: 1,
+          opacity: 1,
+          ...(motionConfig.animateExtras || {})
+        }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{
+          duration: 0.6,
+          ease: 'easeOut',
+          ...(motionConfig.transition || {})
+        }}
+        className={`flex items-center space-x-1 font-semibold rounded-full border ${sizeClasses} ${classes}`}
+      >
+        {renderStatusIcon(value)}
+        <span>{value}</span>
+      </motion.span>
+    </AnimatePresence>
+  )
+}
+
 const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Completed':
-      case 'Passed':
-        return 'text-green-500'
-      case 'In Progress':
-      case 'Scheduled':
-        return 'text-yellow-500'
-      case 'Rejected':
-      case 'Failed':
-        return 'text-red-500'
-      default:
-        return theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-    }
-  }
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Completed':
-      case 'Passed':
-        return <CheckCircle className="w-4 h-4" />
-      case 'In Progress':
-      case 'Scheduled':
-        return <Clock className="w-4 h-4" />
-      default:
-        return <Circle className="w-4 h-4" />
-    }
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -84,12 +156,22 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
         </div>
       </div>
 
-      {/* Recruiter Info */}
-      <div className={`flex items-center space-x-2 mb-4 ${
-        theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-      }`}>
-        <User className="w-4 h-4" />
-        <span>Recruiter: {job.recruiterName}</span>
+      {/* People Info */}
+      <div className="mb-4 space-y-2 text-sm">
+        <div className={`flex items-center space-x-2 ${
+          theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+        }`}>
+          <User className="w-4 h-4" />
+          <span>Recruiter: {job.recruiterName || '—'}</span>
+        </div>
+        {job.hiringManager && (
+          <div className={`flex items-center space-x-2 ${
+            theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+          }`}>
+            <Briefcase className="w-4 h-4" />
+            <span>Hiring Manager: {job.hiringManager}</span>
+          </div>
+        )}
       </div>
 
       {/* Stages */}
@@ -107,10 +189,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
             }`}>
               Recruiter Screen
             </span>
-            <span className={`flex items-center space-x-1 text-sm ${getStatusColor(job.recruiterScreen)}`}>
-              {getStatusIcon(job.recruiterScreen)}
-              <span>{job.recruiterScreen}</span>
-            </span>
+            <StatusPill value={job.recruiterScreen} />
           </div>
           <select
             value={job.recruiterScreen}
@@ -140,10 +219,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
             }`}>
               Technical Screen
             </span>
-            <span className={`flex items-center space-x-1 text-sm ${getStatusColor(job.technicalScreen)}`}>
-              {getStatusIcon(job.technicalScreen)}
-              <span>{job.technicalScreen}</span>
-            </span>
+            <StatusPill value={job.technicalScreen} />
           </div>
           <select
             value={job.technicalScreen}
@@ -174,16 +250,19 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
           </div>
           <div className="space-y-2">
             {['onsiteRound1', 'onsiteRound2', 'onsiteRound3', 'onsiteRound4'].map((round, idx) => (
-              <div key={round} className="flex items-center justify-between">
-                <span className={`text-xs ${
-                  theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-                }`}>
-                  Round {idx + 1}
-                </span>
+              <div key={round} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs ${
+                    theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+                  }`}>
+                    Round {idx + 1}
+                  </span>
+                  <StatusPill value={job[round]} size="sm" />
+                </div>
                 <select
                   value={job[round]}
                   onChange={(e) => onUpdateStatus(job.id, round, e.target.value)}
-                  className={`px-2 py-1 rounded text-xs ${
+                  className={`w-full px-2 py-1 rounded text-xs ${
                     theme === 'dark'
                       ? 'bg-dark-card text-dark-text border-dark-border'
                       : 'bg-white text-light-text border-light-border'
@@ -211,10 +290,7 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
             }`}>
               Final Decision
             </span>
-            <span className={`flex items-center space-x-1 text-sm ${getStatusColor(job.decision)}`}>
-              {getStatusIcon(job.decision)}
-              <span>{job.decision}</span>
-            </span>
+            <StatusPill value={job.decision} />
           </div>
           <select
             value={job.decision}
@@ -233,19 +309,40 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
       </div>
 
       {/* Notes */}
-      {job.notes && (
+      {(job.notes?.trim() || job.hiringManagerNotes?.trim()) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className={`mt-4 p-3 rounded-lg ${
+          className={`mt-4 p-4 rounded-lg space-y-3 ${
             theme === 'dark' ? 'bg-dark-bg' : 'bg-light-bg'
           }`}
         >
-          <p className={`text-sm ${
-            theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-          }`}>
-            <span className="font-semibold">Notes:</span> {job.notes}
-          </p>
+          {job.notes?.trim() && (
+            <div className="flex space-x-3">
+              <FileText className="w-4 h-4 text-purple-500 mt-1" />
+              <div>
+                <p className="text-xs uppercase tracking-wide text-purple-500 font-semibold">Candidate Notes</p>
+                <p className={`text-sm whitespace-pre-line ${
+                  theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+                }`}>
+                  {job.notes}
+                </p>
+              </div>
+            </div>
+          )}
+          {job.hiringManagerNotes?.trim() && (
+            <div className="flex space-x-3">
+              <Briefcase className="w-4 h-4 text-blue-500 mt-1" />
+              <div>
+                <p className="text-xs uppercase tracking-wide text-blue-500 font-semibold">Hiring Manager Notes</p>
+                <p className={`text-sm whitespace-pre-line ${
+                  theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+                }`}>
+                  {job.hiringManagerNotes}
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
     </motion.div>
