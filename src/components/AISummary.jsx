@@ -23,7 +23,7 @@ const formatDate = (timestamp, options = {}) =>
 const sortLogsDesc = (logList = []) =>
   [...logList].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
-const AISummary = ({ logs, jobs, onClose, theme }) => {
+const AISummary = ({ logs, jobs, onClose, theme, onSummaryComplete }) => {
   const [query, setQuery] = useState('')
   const [response, setResponse] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -115,6 +115,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         }
 
         setResponse(summary)
+        onSummaryComplete?.()
       } else if (lowerQuery.includes('summary') || lowerQuery.includes('overview')) {
         // General summary
         const sortedLogs = sortLogsDesc(logs)
@@ -181,6 +182,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         }
 
         setResponse(summary)
+        onSummaryComplete?.()
       } else {
         setResponse(`I couldn't find specific information about "${searchQuery}".\n\nTry asking:\n- "What's the status for [company name]?"\n- "Give me an overview"\n- "Summary of my applications"\n- "What's the latest on [company name]?"`)
       }

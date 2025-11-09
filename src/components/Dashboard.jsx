@@ -7,6 +7,7 @@ import JobForm from './JobForm'
 import ActivityLog from './ActivityLog'
 import AISummary from './AISummary'
 import { logsAPI } from '../services/api'
+import CelebrationOverlay from './CelebrationOverlay'
 
 const jobTemplate = {
   company: '',
@@ -43,6 +44,16 @@ const Dashboard = ({ onLogout }) => {
   const [showLogs, setShowLogs] = useState(false)
   const [showAISummary, setShowAISummary] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [celebration, setCelebration] = useState(null)
+
+  const triggerCelebration = (type, message, title) => {
+    setCelebration({
+      id: Date.now(),
+      type,
+      message,
+      title
+    })
+  }
 
   useEffect(() => {
     // Load jobs from localStorage
@@ -162,6 +173,10 @@ const Dashboard = ({ onLogout }) => {
         details,
         metadata
       })
+
+      if (changedFields.includes('notes') || changedFields.includes('hiringManagerNotes')) {
+        triggerCelebration('success', 'Notes have been updated successfully.', 'Notes Updated')
+      }
     } else {
       const newJob = {
         ...normalizedData,
@@ -179,6 +194,9 @@ const Dashboard = ({ onLogout }) => {
           hiringManager: newJob.hiringManager
         }
       })
+      if (newJob.notes || newJob.hiringManagerNotes) {
+        triggerCelebration('success', 'Initial notes captured for this application.', 'Notes Added')
+      }
     }
     setShowJobForm(false)
     setEditingJob(null)
@@ -203,6 +221,7 @@ const Dashboard = ({ onLogout }) => {
           position: job.position
         }
       })
+      triggerCelebration('failure', `${job.position} at ${job.company} was removed.`, 'Application Removed')
     }
   }
 
@@ -219,6 +238,16 @@ const Dashboard = ({ onLogout }) => {
         details: `${humanizeField(field)} updated to: ${value}`,
         metadata: { field, value }
       })
+
+      const successStates = ['Completed', 'Passed', 'Offer Extended', 'Accepted']
+      const failureStates = ['Rejected', 'Failed', 'Declined']
+
+      if (successStates.includes(value)) {
+        triggerCelebration('success', `${updatedJob.position} marked as ${value}!`, 'Milestone Reached')
+      } else if (failureStates.includes(value)) {
+        triggerCelebration('failure', `${updatedJob.position} marked as ${value}.`, 'Needs Attention')
+      }
+
     }
   }
 
@@ -492,9 +521,16 @@ const Dashboard = ({ onLogout }) => {
             jobs={jobs}
             onClose={() => setShowAISummary(false)}
             theme={theme}
+            onSummaryComplete={() => triggerCelebration('success', 'AI summary is ready!', 'Summary Generated')}
           />
         )}
       </AnimatePresence>
+
+      <CelebrationOverlay
+        celebration={celebration}
+        onClose={() => setCelebration(null)}
+        theme={theme}
+      />
     </div>
   )
 }
