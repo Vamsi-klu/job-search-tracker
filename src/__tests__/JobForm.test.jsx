@@ -75,16 +75,41 @@ describe('JobForm', () => {
     await user.type(screen.getByPlaceholderText('Enter company name'), 'Omega')
     await user.type(screen.getByPlaceholderText('Enter position'), 'Director')
     await user.type(screen.getByPlaceholderText('Enter recruiter name'), 'Jamie')
+    await user.type(screen.getByPlaceholderText('Who is the hiring manager?'), 'Morgan')
+    await user.type(screen.getByPlaceholderText('Feedback directly from the hiring manager, next steps, etc.'), 'HM note')
     await user.selectOptions(screen.getAllByRole('combobox')[0], 'Completed')
     await user.selectOptions(screen.getAllByRole('combobox')[1], 'Rejected')
+    await user.click(screen.getByText(/Add Job/i))
+
+    const selects = screen.getAllByRole('combobox')
+    await user.selectOptions(selects[0], 'Completed')
+    await user.selectOptions(selects[1], 'Rejected')
+    await user.selectOptions(selects[2], 'Scheduled')
+    await user.selectOptions(selects[3], 'Scheduled')
+    await user.selectOptions(selects[4], 'Scheduled')
+    await user.selectOptions(selects[5], 'Scheduled')
+    await user.selectOptions(selects[6], 'Offer Extended')
     await user.click(screen.getByText(/Add Job/i))
 
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         company: 'Omega',
         recruiterScreen: 'Completed',
-        technicalScreen: 'Rejected'
+        technicalScreen: 'Rejected',
+        onsiteRound1: 'Scheduled',
+        onsiteRound4: 'Scheduled',
+        decision: 'Offer Extended'
       })
     )
+  })
+
+  it('closes when clicking overlay in light theme', async () => {
+    const onClose = vi.fn()
+    const user = userEvent.setup()
+    render(<JobForm onSave={() => {}} onClose={onClose} theme="light" />)
+
+    expect(screen.getByText('Add New Job Application')).toBeInTheDocument()
+    await user.click(screen.getByTestId('job-form-overlay'))
+    expect(onClose).toHaveBeenCalled()
   })
 })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Lock, User, Sparkles } from 'lucide-react'
 
@@ -9,12 +9,10 @@ const Auth = ({ onAuthenticated }) => {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false)
   const [error, setError] = useState('')
 
-  useState(() => {
+  useEffect(() => {
     // Check if this is first time use
     const storedPassword = localStorage.getItem('jobTracker_password')
-    if (!storedPassword) {
-      setIsCreatingAccount(true)
-    }
+    setIsCreatingAccount(!storedPassword)
   }, [])
 
   const handleSubmit = (e) => {

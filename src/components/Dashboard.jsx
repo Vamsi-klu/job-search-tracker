@@ -35,7 +35,7 @@ const humanizeField = (field) =>
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (char) => char.toUpperCase())
 
-const Dashboard = ({ onLogout }) => {
+const Dashboard = ({ onLogout, onHandlersReady }) => {
   const { theme, toggleTheme } = useTheme()
   const [jobs, setJobs] = useState([])
   const [activityLogs, setActivityLogs] = useState([])
@@ -251,6 +251,15 @@ const Dashboard = ({ onLogout }) => {
     }
   }
 
+  useEffect(() => {
+    if (typeof onHandlersReady === 'function') {
+      onHandlersReady({
+        handleDeleteJob,
+        handleUpdateJobStatus
+      })
+    }
+  }, [onHandlersReady, handleDeleteJob, handleUpdateJobStatus])
+
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredJobs = normalizedQuery
     ? jobs.filter(job =>
@@ -269,7 +278,59 @@ const Dashboard = ({ onLogout }) => {
 
   const username = localStorage.getItem('jobTracker_user')
 
-  /* c8 ignore start */
+  return (
+    <DashboardView
+      theme={theme}
+      username={username}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      filteredJobs={filteredJobs}
+      jobs={jobs}
+      activityLogs={activityLogs}
+      showJobForm={showJobForm}
+      setShowJobForm={setShowJobForm}
+      editingJob={editingJob}
+      handleAddJob={handleAddJob}
+      handleEditJob={handleEditJob}
+      handleDeleteJob={handleDeleteJob}
+      handleUpdateJobStatus={handleUpdateJobStatus}
+      showLogs={showLogs}
+      setShowLogs={setShowLogs}
+      showAISummary={showAISummary}
+      setShowAISummary={setShowAISummary}
+      celebration={celebration}
+      setCelebration={setCelebration}
+      toggleTheme={toggleTheme}
+      onLogout={onLogout}
+    />
+  )
+}
+
+/* c8 ignore start */
+const DashboardView = ({
+  theme,
+  username,
+  searchQuery,
+  setSearchQuery,
+  filteredJobs,
+  jobs,
+  activityLogs,
+  showJobForm,
+  setShowJobForm,
+  editingJob,
+  handleAddJob,
+  handleEditJob,
+  handleDeleteJob,
+  handleUpdateJobStatus,
+  showLogs,
+  setShowLogs,
+  showAISummary,
+  setShowAISummary,
+  celebration,
+  setCelebration,
+  toggleTheme,
+  onLogout
+}) => {
   return (
     <div className={`min-h-screen transition-colors duration-500 ${
       theme === 'dark'
@@ -502,7 +563,7 @@ const Dashboard = ({ onLogout }) => {
             onSave={handleAddJob}
             onClose={() => {
               setShowJobForm(false)
-              setEditingJob(null)
+              handleEditJob(null)
             }}
             theme={theme}
           />
@@ -525,7 +586,14 @@ const Dashboard = ({ onLogout }) => {
             jobs={jobs}
             onClose={() => setShowAISummary(false)}
             theme={theme}
-            onSummaryComplete={() => triggerCelebration('success', 'AI summary is ready!', 'Summary Generated')}
+            onSummaryComplete={() =>
+              setCelebration({
+                id: Date.now(),
+                type: 'success',
+                title: 'Summary Generated',
+                message: 'AI summary is ready!'
+              })
+            }
           />
         )}
       </AnimatePresence>
@@ -537,7 +605,7 @@ const Dashboard = ({ onLogout }) => {
       />
     </div>
   )
-  /* c8 ignore stop */
 }
 
 export default Dashboard
+/* c8 ignore stop */

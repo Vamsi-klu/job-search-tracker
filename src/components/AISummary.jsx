@@ -43,7 +43,6 @@ const AISummary = ({
       const lowerQuery = normalizeText(searchQuery)
 
       const findCompanyMatch = () => {
-        if (!lowerQuery) return null
         const exact = jobs.find(job => normalizeText(job.company) === lowerQuery)
         if (exact) return exact
         return jobs.find(job => {
@@ -74,6 +73,7 @@ const AISummary = ({
         summary += `- **On-site Round 3:** ${companyMatch.onsiteRound3}\n`
         summary += `- **On-site Round 4:** ${companyMatch.onsiteRound4}\n`
         summary += `- **Decision:** ${companyMatch.decision}\n\n`
+        summary += `**Key Highlights**\n`
 
         const noteLines = []
         if (companyMatch.notes?.trim()) {
@@ -88,7 +88,7 @@ const AISummary = ({
         )
         if (noteLogs.length) {
           const latestNoteLog = noteLogs[0]
-          Object.entries(latestNoteLog.metadata || {}).forEach(([key, value]) => {
+          Object.entries(latestNoteLog.metadata).forEach(([key, value]) => {
             if (value && key.toLowerCase().includes('notes')) {
               noteLines.unshift(
                 `- **${humanizeKey(key)} (${formatDate(latestNoteLog.timestamp)}):** ${value}`
@@ -129,6 +129,7 @@ const AISummary = ({
         let summary = `## Overall Job Search Summary\n\n`
         summary += `**Total Applications:** ${jobs.length}\n`
         summary += `**Total Activities:** ${logs.length}\n\n`
+        summary += `**Highlights**\n`
 
         summary += `### Application Status Breakdown\n`
         const statusCounts = {
@@ -211,7 +212,6 @@ const AISummary = ({
     'Show me recent activity'
   ]
 
-  /* c8 ignore start */
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -399,7 +399,6 @@ const AISummary = ({
       </motion.div>
     </motion.div>
   )
-  /* c8 ignore stop */
 }
 
 export default AISummary

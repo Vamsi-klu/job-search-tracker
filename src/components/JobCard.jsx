@@ -75,7 +75,9 @@ const renderStatusIcon = (status) => {
 const StatusPill = ({ value, size = 'md' }) => {
   const mood = getStatusMood(value)
   const classes = statusClasses[mood]
-  const motionConfig = statusMotionMap[mood]
+  const motionConfig = statusMotionMap[mood] || statusMotionMap.neutral
+  const animateExtras = motionConfig.animateExtras
+  const transitionExtras = motionConfig.transition
   const sizeClasses =
     size === 'sm'
       ? 'px-2 py-0.5 text-[11px]'
@@ -88,13 +90,13 @@ const StatusPill = ({ value, size = 'md' }) => {
         animate={{
           scale: 1,
           opacity: 1,
-          ...(motionConfig.animateExtras || {})
+          ...animateExtras
         }}
         exit={{ scale: 0.8, opacity: 0 }}
         transition={{
           duration: 0.6,
           ease: 'easeOut',
-          ...(motionConfig.transition || {})
+          ...transitionExtras
         }}
         className={`flex items-center space-x-1 font-semibold rounded-full border ${sizeClasses} ${classes}`}
       >
@@ -106,7 +108,6 @@ const StatusPill = ({ value, size = 'md' }) => {
 }
 
 const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
-  /* c8 ignore start */
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -350,7 +351,6 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
       )}
     </motion.div>
   )
-  /* c8 ignore stop */
 }
 
 export default JobCard

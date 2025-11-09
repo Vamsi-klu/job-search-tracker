@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext'
+import { vi } from 'vitest'
 
 const ThemeConsumer = () => {
   const { theme, toggleTheme } = useTheme()
@@ -18,7 +19,7 @@ describe('ThemeContext', () => {
     localStorage.removeItem('jobTracker_theme')
   })
 
-  it('defaults to dark theme and toggles to light', async () => {
+  it('defaults to dark theme and toggles across modes', async () => {
     const user = userEvent.setup()
     render(
       <ThemeProvider>
@@ -34,6 +35,9 @@ describe('ThemeContext', () => {
     expect(screen.getByTestId('theme-value')).toHaveTextContent('light')
     expect(document.documentElement.classList.contains('dark')).toBe(false)
     expect(localStorage.getItem('jobTracker_theme')).toBe('light')
+
+    await user.click(screen.getByText('toggle'))
+    expect(screen.getByTestId('theme-value')).toHaveTextContent('dark')
   })
 
   it('hydrates theme from localStorage', () => {
@@ -44,5 +48,15 @@ describe('ThemeContext', () => {
       </ThemeProvider>
     )
     expect(screen.getByTestId('theme-value')).toHaveTextContent('light')
+  })
+
+  it('throws when useTheme is used outside the provider', () => {
+    const BrokenConsumer = () => {
+      useTheme()
+      return null
+    }
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<BrokenConsumer />)).toThrow('useTheme must be used within ThemeProvider')
+    consoleSpy.mockRestore()
   })
 })

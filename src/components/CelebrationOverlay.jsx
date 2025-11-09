@@ -89,15 +89,16 @@ const FailureParticles = () => (
   </div>
 )
 
-const overlayRoot = typeof document !== 'undefined' ? document.body : null
+export const getOverlayRoot = () => (typeof document !== 'undefined' ? document.body : null)
 
-export default function CelebrationOverlay({ celebration, onClose, theme }) {
+export default function CelebrationOverlay({ celebration, onClose, theme, portalTarget }) {
   useEffect(() => {
     if (!celebration) return
     const timeout = setTimeout(onClose, celebration.duration || 2500)
     return () => clearTimeout(timeout)
   }, [celebration, onClose])
 
+  const overlayRoot = portalTarget === undefined ? getOverlayRoot() : portalTarget
   if (!overlayRoot) return null
 
   return createPortal(

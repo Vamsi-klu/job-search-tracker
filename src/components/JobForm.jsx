@@ -40,7 +40,6 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  /* c8 ignore start */
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -48,6 +47,7 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
+      data-testid="job-form-overlay"
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
@@ -57,6 +57,7 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
         className={`${
           theme === 'dark' ? 'bg-dark-card' : 'bg-white'
         } rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+        data-testid="job-form-modal"
       >
         {/* Header */}
         <div className={`sticky top-0 ${
@@ -338,7 +339,6 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
       </motion.div>
     </motion.div>
   )
-  /* c8 ignore stop */
 }
 
 export default JobForm
