@@ -497,6 +497,7 @@ const Dashboard = ({ onLogout }) => {
       <AnimatePresence>
         {showJobForm && (
           <JobForm
+            key="job-form"
             job={editingJob}
             onSave={handleAddJob}
             onClose={() => {
@@ -509,6 +510,7 @@ const Dashboard = ({ onLogout }) => {
 
         {showLogs && (
           <ActivityLog
+            key="activity-log"
             logs={activityLogs}
             jobs={jobs}
             onClose={() => setShowLogs(false)}
@@ -518,6 +520,7 @@ const Dashboard = ({ onLogout }) => {
 
         {showAISummary && (
           <AISummary
+            key="ai-summary"
             logs={activityLogs}
             jobs={jobs}
             onClose={() => setShowAISummary(false)}
