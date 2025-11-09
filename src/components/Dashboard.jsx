@@ -6,6 +6,9 @@ import JobCard from './JobCard'
 import JobForm from './JobForm'
 import ActivityLog from './ActivityLog'
 import AISummary from './AISummary'
+import CelebrationAnimation from './CelebrationAnimation'
+import DisappointmentAnimation from './DisappointmentAnimation'
+import Toast from './Toast'
 import { logsAPI } from '../services/api'
 
 const Dashboard = ({ onLogout }) => {
@@ -17,6 +20,9 @@ const Dashboard = ({ onLogout }) => {
   const [showLogs, setShowLogs] = useState(false)
   const [showAISummary, setShowAISummary] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [showDisappointment, setShowDisappointment] = useState(false)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
 
   useEffect(() => {
     // Load jobs from localStorage
@@ -48,6 +54,21 @@ const Dashboard = ({ onLogout }) => {
   const saveJobs = (newJobs) => {
     setJobs(newJobs)
     localStorage.setItem('jobTracker_jobs', JSON.stringify(newJobs))
+  }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' })
+    }, 3000)
+  }
+
+  const triggerCelebration = () => {
+    setShowCelebration(true)
+  }
+
+  const triggerDisappointment = () => {
+    setShowDisappointment(true)
   }
 
   const addLog = async (action, jobTitle, company, details) => {
@@ -85,10 +106,20 @@ const Dashboard = ({ onLogout }) => {
       )
       saveJobs(updatedJobs)
       addLog('updated', jobData.position, jobData.company, 'Job details updated')
+
+      // Check if notes were updated
+      if (editingJob.notes !== jobData.notes && jobData.notes) {
+        triggerCelebration()
+        showToast('✅ Notes updated successfully!', 'success')
+      } else {
+        showToast('✅ Job updated successfully!', 'success')
+      }
     } else {
       const newJob = { ...jobData, id: Date.now(), createdAt: new Date().toISOString() }
       saveJobs([...jobs, newJob])
       addLog('created', jobData.position, jobData.company, 'New job application added')
+      triggerCelebration()
+      showToast('🎉 New job application added!', 'success')
     }
     setShowJobForm(false)
     setEditingJob(null)
@@ -114,6 +145,21 @@ const Dashboard = ({ onLogout }) => {
       j.id === jobId ? { ...j, [field]: value } : j
     )
     saveJobs(updatedJobs)
+
+    // Determine if this is a success or failure status
+    const successStatuses = ['Completed', 'Passed', 'Offer Extended', 'Accepted']
+    const failureStatuses = ['Rejected', 'Failed', 'Declined']
+
+    if (successStatuses.includes(value)) {
+      triggerCelebration()
+      showToast(`🎉 Great news! ${field.replace(/([A-Z])/g, ' $1').trim()} marked as ${value}!`, 'success')
+    } else if (failureStatuses.includes(value)) {
+      triggerDisappointment()
+      showToast(`${field.replace(/([A-Z])/g, ' $1').trim()} updated to ${value}`, 'warning')
+    } else {
+      showToast(`${field.replace(/([A-Z])/g, ' $1').trim()} updated to ${value}`, 'info')
+    }
+
     if (job) {
       addLog('status_update', job.position, job.company, `${field} updated to: ${value}`)
     }
@@ -382,6 +428,24 @@ const Dashboard = ({ onLogout }) => {
           />
         )}
       </AnimatePresence>
+
+      {/* Animations */}
+      <CelebrationAnimation
+        show={showCelebration}
+        onComplete={() => setShowCelebration(false)}
+      />
+      <DisappointmentAnimation
+        show={showDisappointment}
+        onComplete={() => setShowDisappointment(false)}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, show: false })}
+      />
     </div>
   )
 }

@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Sparkles, Send, Loader } from 'lucide-react'
+import CelebrationAnimation from './CelebrationAnimation'
 
 const AISummary = ({ logs, jobs, onClose, theme }) => {
   const [query, setQuery] = useState('')
   const [response, setResponse] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
 
   const generateSummary = (searchQuery) => {
     setIsLoading(true)
@@ -76,6 +78,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         }
 
         setResponse(summary)
+        setShowCelebration(true)
       } else if (lowerQuery.includes('summary') || lowerQuery.includes('overview')) {
         // General summary
         let summary = `## Overall Job Search Summary\n\n`
@@ -125,6 +128,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         })
 
         setResponse(summary)
+        setShowCelebration(true)
       } else {
         setResponse(`I couldn't find specific information about "${searchQuery}".\n\nTry asking:\n- "What's the status for [company name]?"\n- "Give me an overview"\n- "Summary of my applications"\n- "What's the latest on [company name]?"`)
       }
@@ -330,6 +334,12 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
           </div>
         </form>
       </motion.div>
+
+      {/* Celebration Animation */}
+      <CelebrationAnimation
+        show={showCelebration}
+        onComplete={() => setShowCelebration(false)}
+      />
     </motion.div>
   )
 }
