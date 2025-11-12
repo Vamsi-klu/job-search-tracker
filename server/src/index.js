@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initializeDatabase } from './database.js';
 import logsRouter from './routes/logs.js';
+import jobsRouter from './routes/jobs.js';
+import migrationRouter from './routes/migration.js';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +32,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/logs', logsRouter);
+app.use('/api/jobs', jobsRouter);
+app.use('/api/migrate', migrationRouter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -44,10 +48,12 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     message: 'Job Search Tracker API',
-    version: '1.0.0',
+    version: '2.0.0',
     endpoints: {
       health: '/health',
-      logs: '/api/logs'
+      logs: '/api/logs',
+      jobs: '/api/jobs',
+      migration: '/api/migrate'
     }
   });
 });
@@ -72,7 +78,9 @@ app.listen(PORT, () => {
   console.log(`📊 API endpoints:`);
   console.log(`   - Health: http://localhost:${PORT}/health`);
   console.log(`   - Logs: http://localhost:${PORT}/api/logs`);
-  console.log(`\n📝 Database: SQLite (logs.db)`);
+  console.log(`   - Jobs: http://localhost:${PORT}/api/jobs`);
+  console.log(`   - Migration: http://localhost:${PORT}/api/migrate`);
+  console.log(`\n📝 Database: SQLite (jobs-tracker.db with optimized schema)`);
   console.log(`\nPress Ctrl+C to stop the server\n`);
 });
 
