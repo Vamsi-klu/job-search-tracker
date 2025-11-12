@@ -6,7 +6,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create database connection
-const db = new Database(path.join(__dirname, '../logs.db'), { verbose: console.log });
+// Use test database in test environment
+const dbPath = process.env.NODE_ENV === 'test'
+  ? path.join(__dirname, '../test-logs.db')
+  : path.join(__dirname, '../logs.db');
+
+const db = new Database(dbPath, { verbose: console.log });
 
 // Enable WAL mode for better concurrent access
 db.pragma('journal_mode = WAL');

@@ -312,6 +312,77 @@ const recent = await logsAPI.getRecent(7);
 const stats = await logsAPI.getStats();
 ```
 
+## 🧪 Testing
+
+Comprehensive test suites with high code coverage for both frontend and backend.
+
+### Backend Tests (Jest)
+
+**Coverage: 75%+** across all modules
+
+```bash
+# Run all backend tests
+cd server && npm test
+
+# Run specific test suites
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests only
+
+# Watch mode for development
+npm run test:watch
+```
+
+**Test Suites:**
+- **Unit Tests (18 tests)**: Database operations, prepared statements, schema validation
+- **Integration Tests (19 tests)**: API endpoints, CRUD operations, filtering, pagination
+
+### Frontend Tests (Vitest)
+
+```bash
+# Run frontend tests
+npm test
+
+# Watch mode
+npm test:watch
+
+# UI mode
+npm test:ui
+```
+
+**Test Coverage:**
+- API service layer (100% coverage)
+- All HTTP methods and error handling
+- Query parameter construction
+- Health check functionality
+
+### Run All Tests
+
+```bash
+# Run both frontend and backend tests
+npm run test:all
+```
+
+### Test Files Structure
+
+```
+server/src/__tests__/
+├── unit/
+│   └── database.test.js        # Database operations tests
+└── integration/
+    └── api.test.js             # API endpoint tests
+
+src/__tests__/
+└── api.test.js                  # Frontend API service tests
+```
+
+### Coverage Reports
+
+Coverage reports are generated in:
+- Backend: `server/coverage/`
+- Frontend: `coverage/`
+
+Open `coverage/index.html` in a browser to view detailed coverage reports.
+
 ## 🔒 Security Note
 
 This is a demo application using localStorage for data persistence. For production use, consider:
