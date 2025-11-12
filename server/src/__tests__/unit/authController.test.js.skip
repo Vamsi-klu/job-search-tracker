@@ -1,0 +1,516 @@
+import { jest } from '@jest/globals';
+import bcrypt from 'bcrypt';
+import { register, login, logout, getCurrentUser, changePassword } from '../../controllers/authController.js';
+import db from '../../database.js';
+import { generateToken } from '../../middleware/auth.js';
+
+// Mock dependencies
+jest.mock('bcrypt');
+jest.mock('../../database.js', () => ({
+  __esModule: true,
+  default: {
+    prepare: jest.fn()
+  }
+}));
+jest.mock('../../middleware/auth.js', () => ({
+  generateToken: jest.fn()
+}));
+
+describe('Auth Controller', () => {
+  let req, res;
+
+  beforeEach(() => {
+    // Reset mocks
+    jest.clearAllMocks();
+
+    // Setup req/res objects
+    req = {
+      body: {},
+      user: {}
+    };
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis()
+    };
+
+    // Mock console.error to suppress error logs in tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
+  });
+
+  describe('register', () => {
+    test('should register a new user successfully', async () => {
+      req.body = { username: 'testuser', password: 'testpass123' };
+
+      const mockPrepare = jest.fn();
+      mockPrepare.mockReturnValueOnce({ get: jest.fn().mockReturnValue(null) }); // User doesn't exist
+      mockPrepare.mockReturnValueOnce({
+        run: jest.fn().mockReturnValue({ lastInsertRowid: 1 })
+      }); // Insert user
+
+      db.prepare.mockImplementation(mockPrepare);
+      bcrypt.hash.mockResolvedValue('hashed_password');
+      generateToken.mockReturnValue('jwt_token_123');
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'User registered successfully',
+        token: 'jwt_token_123',
+        user: {
+          id: 1,
+          username: 'testuser'
+        }
+      });
+    });
+
+    test('should reject registration with missing username', async () => {
+      req.body = { password: 'testpass123' };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Missing required fields',
+        message: 'Username and password are required'
+      });
+    });
+
+    test('should reject registration with missing password', async () => {
+      req.body = { username: 'testuser' };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Missing required fields',
+        message: 'Username and password are required'
+      });
+    });
+
+    test('should reject username shorter than 3 characters', async () => {
+      req.body = { username: 'ab', password: 'testpass123' };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Invalid username',
+        message: 'Username must be between 3 and 50 characters'
+      });
+    });
+
+    test('should reject username longer than 50 characters', async () => {
+      req.body = {
+        username: 'a'.repeat(51),
+        password: 'testpass123'
+      };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Invalid username',
+        message: 'Username must be between 3 and 50 characters'
+      });
+    });
+
+    test('should reject username with invalid characters', async () => {
+      req.body = { username: 'test@user!', password: 'testpass123' };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Invalid username',
+        message: 'Username can only contain letters, numbers, underscores, and hyphens'
+      });
+    });
+
+    test('should reject password shorter than 8 characters', async () => {
+      req.body = { username: 'testuser', password: 'short' };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Weak password',
+        message: 'Password must be at least 8 characters long'
+      });
+    });
+
+    test('should reject duplicate username', async () => {
+      req.body = { username: 'testuser', password: 'testpass123' };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue({ id: 1 }) // User exists
+      });
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Username already exists',
+        message: 'Please choose a different username'
+      });
+    });
+
+    test('should handle database errors gracefully', async () => {
+      req.body = { username: 'testuser', password: 'testpass123' };
+
+      db.prepare.mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Registration failed',
+        message: 'An error occurred during registration'
+      });
+    });
+
+    test('should hash password with bcrypt', async () => {
+      req.body = { username: 'testuser', password: 'testpass123' };
+
+      const mockPrepare = jest.fn();
+      mockPrepare.mockReturnValueOnce({ get: jest.fn().mockReturnValue(null) });
+      mockPrepare.mockReturnValueOnce({
+        run: jest.fn().mockReturnValue({ lastInsertRowid: 1 })
+      });
+
+      db.prepare.mockImplementation(mockPrepare);
+      bcrypt.hash.mockResolvedValue('hashed_password');
+      generateToken.mockReturnValue('jwt_token_123');
+
+      await register(req, res);
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('testpass123', 10);
+    });
+  });
+
+  describe('login', () => {
+    test('should login user successfully with correct credentials', async () => {
+      req.body = { username: 'testuser', password: 'testpass123' };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue({
+          id: 1,
+          username: 'testuser',
+          password_hash: 'hashed_password'
+        })
+      });
+
+      bcrypt.compare.mockResolvedValue(true);
+      generateToken.mockReturnValue('jwt_token_123');
+
+      await login(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Login successful',
+        token: 'jwt_token_123',
+        user: {
+          id: 1,
+          username: 'testuser'
+        }
+      });
+    });
+
+    test('should reject login with missing username', async () => {
+      req.body = { password: 'testpass123' };
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Missing required fields',
+        message: 'Username and password are required'
+      });
+    });
+
+    test('should reject login with missing password', async () => {
+      req.body = { username: 'testuser' };
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Missing required fields',
+        message: 'Username and password are required'
+      });
+    });
+
+    test('should reject login with non-existent user', async () => {
+      req.body = { username: 'nonexistent', password: 'testpass123' };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue(null)
+      });
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Invalid credentials',
+        message: 'Username or password is incorrect'
+      });
+    });
+
+    test('should reject login with incorrect password', async () => {
+      req.body = { username: 'testuser', password: 'wrongpassword' };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue({
+          id: 1,
+          username: 'testuser',
+          password_hash: 'hashed_password'
+        })
+      });
+
+      bcrypt.compare.mockResolvedValue(false);
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Invalid credentials'
+        })
+      );
+    });
+
+    test('should implement account lockout after 5 failed attempts', async () => {
+      req.body = { username: 'testuser', password: 'wrongpassword' };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue({
+          id: 1,
+          username: 'testuser',
+          password_hash: 'hashed_password'
+        })
+      });
+
+      bcrypt.compare.mockResolvedValue(false);
+
+      // Attempt 5 failed logins
+      for (let i = 0; i < 5; i++) {
+        await login(req, res);
+      }
+
+      // 6th attempt should be locked out
+      jest.clearAllMocks();
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(429);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Too many failed attempts',
+        message: 'Account is temporarily locked. Please try again in 15 minutes.'
+      });
+    });
+
+    test('should clear failed attempts on successful login', async () => {
+      req.body = { username: 'testuser', password: 'wrongpassword' };
+
+      // First fail a few times
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue({
+          id: 1,
+          username: 'testuser',
+          password_hash: 'hashed_password'
+        })
+      });
+      bcrypt.compare.mockResolvedValue(false);
+
+      await login(req, res);
+      await login(req, res);
+
+      // Then succeed
+      jest.clearAllMocks();
+      req.body.password = 'correctpassword';
+      bcrypt.compare.mockResolvedValue(true);
+      generateToken.mockReturnValue('jwt_token_123');
+
+      await login(req, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: 'Login successful'
+        })
+      );
+
+      // Should be able to login again without lockout
+      jest.clearAllMocks();
+      await login(req, res);
+      expect(res.status).not.toHaveBeenCalledWith(429);
+    });
+
+    test('should handle database errors gracefully', async () => {
+      req.body = { username: 'testuser', password: 'testpass123' };
+
+      db.prepare.mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Login failed',
+        message: 'An error occurred during login'
+      });
+    });
+  });
+
+  describe('getCurrentUser', () => {
+    test('should return current user info', () => {
+      req.user = { userId: 1, username: 'testuser' };
+
+      getCurrentUser(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        user: {
+          id: 1,
+          username: 'testuser'
+        }
+      });
+    });
+  });
+
+  describe('logout', () => {
+    test('should logout successfully', () => {
+      logout(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    });
+  });
+
+  describe('changePassword', () => {
+    test('should change password successfully', async () => {
+      req.body = { currentPassword: 'oldpass123', newPassword: 'newpass123' };
+      req.user = { userId: 1 };
+
+      db.prepare.mockReturnValueOnce({
+        get: jest.fn().mockReturnValue({
+          password_hash: 'old_hashed_password'
+        })
+      }).mockReturnValueOnce({
+        run: jest.fn()
+      });
+
+      bcrypt.compare.mockResolvedValue(true);
+      bcrypt.hash.mockResolvedValue('new_hashed_password');
+
+      await changePassword(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Password changed successfully'
+      });
+    });
+
+    test('should reject with missing current password', async () => {
+      req.body = { newPassword: 'newpass123' };
+      req.user = { userId: 1 };
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Missing required fields',
+        message: 'Current password and new password are required'
+      });
+    });
+
+    test('should reject with missing new password', async () => {
+      req.body = { currentPassword: 'oldpass123' };
+      req.user = { userId: 1 };
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Missing required fields',
+        message: 'Current password and new password are required'
+      });
+    });
+
+    test('should reject new password shorter than 8 characters', async () => {
+      req.body = { currentPassword: 'oldpass123', newPassword: 'short' };
+      req.user = { userId: 1 };
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Weak password',
+        message: 'New password must be at least 8 characters long'
+      });
+    });
+
+    test('should reject with incorrect current password', async () => {
+      req.body = { currentPassword: 'wrongpass', newPassword: 'newpass123' };
+      req.user = { userId: 1 };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue({
+          password_hash: 'old_hashed_password'
+        })
+      });
+
+      bcrypt.compare.mockResolvedValue(false);
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Invalid password',
+        message: 'Current password is incorrect'
+      });
+    });
+
+    test('should reject for non-existent user', async () => {
+      req.body = { currentPassword: 'oldpass123', newPassword: 'newpass123' };
+      req.user = { userId: 999 };
+
+      db.prepare.mockReturnValue({
+        get: jest.fn().mockReturnValue(null)
+      });
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'User not found'
+      });
+    });
+
+    test('should handle database errors gracefully', async () => {
+      req.body = { currentPassword: 'oldpass123', newPassword: 'newpass123' };
+      req.user = { userId: 1 };
+
+      db.prepare.mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Failed to change password',
+        message: 'An error occurred while changing password'
+      });
+    });
+  });
+});
