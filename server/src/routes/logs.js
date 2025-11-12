@@ -8,28 +8,35 @@ import {
   cleanupOldLogs,
   bulkCreateLogs
 } from '../controllers/logsController.js';
+import {
+  validateCreateLog,
+  validateBulkLogs,
+  validateLogQuery,
+  validateId,
+  validateCleanup
+} from '../middleware/validation.js';
 
 const router = express.Router();
 
 // Create a new log entry
-router.post('/', createLog);
+router.post('/', validateCreateLog, createLog);
 
 // Bulk create logs (for migration)
-router.post('/bulk', bulkCreateLogs);
+router.post('/bulk', validateBulkLogs, bulkCreateLogs);
 
 // Get all logs (supports query parameters for filtering)
-router.get('/', getLogs);
+router.get('/', validateLogQuery, getLogs);
 
 // Get log statistics
 router.get('/stats', getLogStats);
 
 // Get a specific log by ID
-router.get('/:id', getLogById);
+router.get('/:id', validateId, getLogById);
 
 // Delete a log by ID
-router.delete('/:id', deleteLog);
+router.delete('/:id', validateId, deleteLog);
 
 // Cleanup old logs
-router.delete('/cleanup/:days', cleanupOldLogs);
+router.delete('/cleanup/:days', validateCleanup, cleanupOldLogs);
 
 export default router;
