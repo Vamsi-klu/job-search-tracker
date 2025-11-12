@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, LogOut, Sun, Moon, Sparkles, Search } from 'lucide-react'
+import { Plus, LogOut, Sun, Moon, Sparkles, Search, HelpCircle } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import JobCard from './JobCard'
 import JobForm from './JobForm'
@@ -8,6 +8,8 @@ import ActivityLog from './ActivityLog'
 import AISummary from './AISummary'
 import { logsAPI } from '../services/api'
 import CelebrationOverlay from './CelebrationOverlay'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
 
 const jobTemplate = {
   company: '',
@@ -45,6 +47,8 @@ const Dashboard = ({ onLogout, onHandlersReady }) => {
   const [showAISummary, setShowAISummary] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [celebration, setCelebration] = useState(null)
+  const [showHelp, setShowHelp] = useState(false)
+  const searchInputRef = useRef(null)
 
   const triggerCelebration = (type, message, title) => {
     setCelebration({
@@ -54,6 +58,30 @@ const Dashboard = ({ onLogout, onHandlersReady }) => {
       title
     })
   }
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    'n': () => !showJobForm && !showLogs && !showAISummary && !showHelp && setShowJobForm(true),
+    'l': () => !showJobForm && !showLogs && !showAISummary && !showHelp && setShowLogs(true),
+    'a': () => !showJobForm && !showLogs && !showAISummary && !showHelp && setShowAISummary(true),
+    't': () => !showJobForm && !showLogs && !showAISummary && !showHelp && toggleTheme(),
+    '?': () => setShowHelp(true),
+    'escape': () => {
+      if (showJobForm) setShowJobForm(false)
+      if (showLogs) setShowLogs(false)
+      if (showAISummary) setShowAISummary(false)
+      if (showHelp) setShowHelp(false)
+      if (editingJob) setEditingJob(null)
+    },
+    'ctrl+k': (e) => {
+      e?.preventDefault()
+      searchInputRef.current?.focus()
+    },
+    'cmd+k': (e) => {
+      e?.preventDefault()
+      searchInputRef.current?.focus()
+    }
+  })
 
   useEffect(() => {
     // Load jobs from localStorage
@@ -302,6 +330,9 @@ const Dashboard = ({ onLogout, onHandlersReady }) => {
       setCelebration={setCelebration}
       toggleTheme={toggleTheme}
       onLogout={onLogout}
+      showHelp={showHelp}
+      setShowHelp={setShowHelp}
+      searchInputRef={searchInputRef}
     />
   )
 }
@@ -329,7 +360,10 @@ const DashboardView = ({
   celebration,
   setCelebration,
   toggleTheme,
-  onLogout
+  onLogout,
+  showHelp,
+  setShowHelp,
+  searchInputRef
 }) => {
   return (
     <div className={`min-h-screen transition-colors duration-500 ${
@@ -337,8 +371,16 @@ const DashboardView = ({
         ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900'
         : 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50'
     }`}>
+      {/* Skip to main content link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-purple-600 focus:text-white focus:rounded-md focus:m-2"
+      >
+        Skip to main content
+      </a>
       {/* Header */}
       <motion.header
+        role="banner"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         className={`${
@@ -375,12 +417,29 @@ const DashboardView = ({
               </div>
             </motion.div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3" role="group" aria-label="Dashboard actions">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowHelp(true)}
+                aria-label="Show keyboard shortcuts (Press ?)"
+                className={`p-2 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-dark-card hover:bg-dark-border'
+                    : 'bg-light-card hover:bg-light-border'
+                } transition-colors`}
+                title="Keyboard Shortcuts"
+              >
+                <HelpCircle className={`w-5 h-5 ${
+                  theme === 'dark' ? 'text-dark-text' : 'text-light-text'
+                }`} aria-hidden="true" />
+              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowAISummary(true)}
-                aria-label="Open AI summary"
+                aria-label="Open AI summary (Keyboard shortcut: A)"
                 className={`p-2 rounded-lg ${
                   theme === 'dark'
                     ? 'bg-purple-600 hover:bg-purple-700'
@@ -388,13 +447,14 @@ const DashboardView = ({
                 } text-white transition-colors`}
                 title="AI Summary"
               >
-                <Sparkles className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" aria-hidden="true" />
               </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={toggleTheme}
+                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode (Keyboard shortcut: T)`}
                 className={`p-2 rounded-lg ${
                   theme === 'dark'
                     ? 'bg-dark-card hover:bg-dark-border'
@@ -402,9 +462,9 @@ const DashboardView = ({
                 } transition-colors`}
               >
                 {theme === 'dark' ? (
-                  <Sun className="w-5 h-5 text-yellow-400" />
+                  <Sun className="w-5 h-5 text-yellow-400" aria-hidden="true" />
                 ) : (
-                  <Moon className="w-5 h-5 text-purple-600" />
+                  <Moon className="w-5 h-5 text-purple-600" aria-hidden="true" />
                 )}
               </motion.button>
 
@@ -412,13 +472,14 @@ const DashboardView = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={onLogout}
+                aria-label="Logout"
                 className={`p-2 rounded-lg ${
                   theme === 'dark'
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-red-500 hover:bg-red-600'
                 } text-white transition-colors`}
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-5 h-5" aria-hidden="true" />
               </motion.button>
             </div>
           </div>
@@ -426,7 +487,7 @@ const DashboardView = ({
       </motion.header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats and Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <motion.div
@@ -474,9 +535,10 @@ const DashboardView = ({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowJobForm(true)}
+              aria-label="Add new job application (Keyboard shortcut: N)"
               className="w-full h-full bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl p-6 shadow-lg font-semibold text-lg flex items-center justify-center space-x-2"
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-6 h-6" aria-hidden="true" />
               <span>Add New Job</span>
             </motion.button>
           </motion.div>
@@ -488,16 +550,23 @@ const DashboardView = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           className="mb-8"
+          role="search"
         >
           <div className="relative">
+            <label htmlFor="job-search" className="sr-only">
+              Search jobs by company, position, or recruiter
+            </label>
             <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
               theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-            }`} />
+            }`} aria-hidden="true" />
             <input
-              type="text"
-              placeholder="Search jobs by company, position, or recruiter..."
+              id="job-search"
+              ref={searchInputRef}
+              type="search"
+              placeholder="Search jobs by company, position, or recruiter... (Ctrl+K)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search jobs"
               className={`w-full pl-12 pr-4 py-4 rounded-xl ${
                 theme === 'dark'
                   ? 'bg-dark-card text-dark-text border-dark-border'
@@ -543,6 +612,7 @@ const DashboardView = ({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowLogs(true)}
+          aria-label="View activity logs (Keyboard shortcut: L)"
           className={`w-full py-4 rounded-xl font-semibold ${
             theme === 'dark'
               ? 'bg-dark-card hover:bg-dark-border text-dark-text'
@@ -553,7 +623,7 @@ const DashboardView = ({
         >
           View Activity Logs ({activityLogs.length})
         </motion.button>
-      </div>
+      </main>
 
       {/* Modals */}
       <AnimatePresence>
@@ -592,6 +662,14 @@ const DashboardView = ({
                 message: 'AI summary is ready!'
               })
             }
+          />
+        )}
+
+        {showHelp && (
+          <KeyboardShortcutsHelp
+            key="keyboard-help"
+            onClose={() => setShowHelp(false)}
+            theme={theme}
           />
         )}
       </AnimatePresence>

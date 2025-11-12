@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Building2, User, Briefcase, Edit, Trash2, CheckCircle, Circle, Clock, FileText } from 'lucide-react'
 
@@ -72,7 +73,7 @@ const renderStatusIcon = (status) => {
   }
 }
 
-const StatusPill = ({ value, size = 'md' }) => {
+const StatusPill = memo(({ value, size = 'md' }) => {
   const mood = getStatusMood(value)
   const classes = statusClasses[mood]
   const motionConfig = statusMotionMap[mood] || statusMotionMap.neutral
@@ -99,13 +100,16 @@ const StatusPill = ({ value, size = 'md' }) => {
           ...transitionExtras
         }}
         className={`flex items-center space-x-1 font-semibold rounded-full border ${sizeClasses} ${classes}`}
+        role="status"
+        aria-live="polite"
+        aria-label={`Status: ${value}`}
       >
         {renderStatusIcon(value)}
         <span>{value}</span>
       </motion.span>
     </AnimatePresence>
   )
-}
+})
 
 const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
   return (
@@ -138,41 +142,41 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
           </div>
         </div>
 
-      <div className="flex space-x-2">
+      <div className="flex space-x-2" role="group" aria-label="Job actions">
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => onEdit(job)}
-          aria-label="Edit job"
+          aria-label={`Edit ${job.position} at ${job.company}`}
           className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
         >
-          <Edit className="w-4 h-4" />
+          <Edit className="w-4 h-4" aria-hidden="true" />
         </motion.button>
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => onDelete(job.id)}
-          aria-label="Delete job"
+          aria-label={`Delete ${job.position} at ${job.company}`}
           className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
         </motion.button>
       </div>
       </div>
 
       {/* People Info */}
-      <div className="mb-4 space-y-2 text-sm">
+      <div className="mb-4 space-y-2 text-sm" role="list" aria-label="Contact information">
         <div className={`flex items-center space-x-2 ${
           theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-        }`}>
-          <User className="w-4 h-4" />
+        }`} role="listitem">
+          <User className="w-4 h-4" aria-hidden="true" />
           <span>Recruiter: {job.recruiterName || '—'}</span>
         </div>
         {job.hiringManager && (
           <div className={`flex items-center space-x-2 ${
             theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
-          }`}>
-            <Briefcase className="w-4 h-4" />
+          }`} role="listitem">
+            <Briefcase className="w-4 h-4" aria-hidden="true" />
             <span>Hiring Manager: {job.hiringManager}</span>
           </div>
         )}
@@ -195,9 +199,14 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
             </span>
             <StatusPill value={job.recruiterScreen} />
           </div>
+          <label htmlFor={`recruiter-screen-${job.id}`} className="sr-only">
+            Recruiter screen status for {job.position}
+          </label>
           <select
+            id={`recruiter-screen-${job.id}`}
             value={job.recruiterScreen}
             onChange={(e) => onUpdateStatus(job.id, 'recruiterScreen', e.target.value)}
+            aria-label={`Recruiter screen status for ${job.position} at ${job.company}`}
             className={`w-full px-3 py-2 rounded-lg text-sm ${
               theme === 'dark'
                 ? 'bg-dark-card text-dark-text border-dark-border'
@@ -225,9 +234,14 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
             </span>
             <StatusPill value={job.technicalScreen} />
           </div>
+          <label htmlFor={`technical-screen-${job.id}`} className="sr-only">
+            Technical screen status for {job.position}
+          </label>
           <select
+            id={`technical-screen-${job.id}`}
             value={job.technicalScreen}
             onChange={(e) => onUpdateStatus(job.id, 'technicalScreen', e.target.value)}
+            aria-label={`Technical screen status for ${job.position} at ${job.company}`}
             className={`w-full px-3 py-2 rounded-lg text-sm ${
               theme === 'dark'
                 ? 'bg-dark-card text-dark-text border-dark-border'
@@ -353,4 +367,4 @@ const JobCard = ({ job, index, onEdit, onDelete, onUpdateStatus, theme }) => {
   )
 }
 
-export default JobCard
+export default memo(JobCard)
