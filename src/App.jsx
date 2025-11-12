@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
+import ErrorBoundary from './components/ErrorBoundary'
 import { ThemeProvider } from './contexts/ThemeContext'
 
 function App() {
@@ -29,21 +30,24 @@ function App() {
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           className="w-16 h-16 border-4 border-white border-t-transparent rounded-full"
+          aria-label="Loading..."
         />
       </div>
     )
   }
 
   return (
-    <ThemeProvider>
-      <AnimatePresence mode="wait">
-        {!isAuthenticated ? (
-          <Auth key="auth" onAuthenticated={() => setIsAuthenticated(true)} />
-        ) : (
-          <Dashboard key="dashboard" onLogout={handleLogout} />
-        )}
-      </AnimatePresence>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AnimatePresence mode="wait">
+          {!isAuthenticated ? (
+            <Auth key="auth" onAuthenticated={() => setIsAuthenticated(true)} />
+          ) : (
+            <Dashboard key="dashboard" onLogout={handleLogout} />
+          )}
+        </AnimatePresence>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 

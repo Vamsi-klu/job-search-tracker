@@ -1,25 +1,35 @@
 import { logOperations } from '../database.js';
+import {
+  validateLogEntry,
+  validateLogQuery,
+  validateLogId,
+  validateDaysParam,
+  validateBulkLogs
+} from '../utils/validation.js';
 
 // Create a new log entry
 export function createLog(req, res) {
   try {
     const { timestamp, action, jobTitle, company, details, username } = req.body;
 
-    // Validation
-    if (!timestamp || !action || !username) {
+    // Validate and sanitize input
+    const validation = validateLogEntry({
+      timestamp,
+      action,
+      jobTitle,
+      company,
+      details,
+      username
+    });
+
+    if (!validation.isValid) {
       return res.status(400).json({
-        error: 'Missing required fields: timestamp, action, and username are required'
+        error: 'Validation failed',
+        details: validation.errors
       });
     }
 
-    const info = logOperations.create.run({
-      timestamp,
-      action,
-      jobTitle: jobTitle || null,
-      company: company || null,
-      details: details || null,
-      username
-    });
+    const info = logOperations.create.run(validation.sanitized);
 
     res.status(201).json({
       success: true,
@@ -35,49 +45,51 @@ export function createLog(req, res) {
 // Get all logs or filter by query parameters
 export function getLogs(req, res) {
   try {
-    const {
-      action,
-      company,
-      username,
-      startDate,
-      endDate,
-      search,
-      days,
-      limit,
-      offset
-    } = req.query;
+    // Validate query parameters
+    const validation = validateLogQuery(req.query);
 
+    if (!validation.isValid) {
+      return res.status(400).json({
+        error: 'Invalid query parameters',
+        details: validation.errors
+      });
+    }
+
+    const sanitized = validation.sanitized;
     let logs;
 
     // Filter by action
-    if (action) {
-      logs = logOperations.getByAction.all({ action });
+    if (sanitized.action) {
+      logs = logOperations.getByAction.all({ action: sanitized.action });
     }
     // Filter by company
-    else if (company) {
-      logs = logOperations.getByCompany.all({ company: `%${company}%` });
+    else if (sanitized.company) {
+      logs = logOperations.getByCompany.all({ company: sanitized.company });
     }
     // Filter by username
-    else if (username) {
-      logs = logOperations.getByUsername.all({ username });
+    else if (sanitized.username) {
+      logs = logOperations.getByUsername.all({ username: sanitized.username });
     }
     // Filter by date range
-    else if (startDate && endDate) {
-      logs = logOperations.getByDateRange.all({ startDate, endDate });
+    else if (sanitized.startDate && sanitized.endDate) {
+      logs = logOperations.getByDateRange.all({
+        startDate: sanitized.startDate,
+        endDate: sanitized.endDate
+      });
     }
     // Search by keyword
-    else if (search) {
-      logs = logOperations.search.all({ keyword: `%${search}%` });
+    else if (sanitized.search) {
+      logs = logOperations.search.all({ keyword: sanitized.search });
     }
     // Get recent activity (last N days)
-    else if (days) {
-      logs = logOperations.getRecentActivity.all({ days: `-${days}` });
+    else if (sanitized.days) {
+      logs = logOperations.getRecentActivity.all({ days: sanitized.days });
     }
     // Pagination
-    else if (limit) {
+    else if (sanitized.limit !== undefined) {
       logs = logOperations.getPaginated.all({
-        limit: parseInt(limit),
-        offset: parseInt(offset) || 0
+        limit: sanitized.limit,
+        offset: sanitized.offset || 0
       });
     }
     // Get all logs
@@ -115,7 +127,15 @@ export function getLogStats(req, res) {
 export function getLogById(req, res) {
   try {
     const { id } = req.params;
-    const log = logOperations.getById.get({ id: parseInt(id) });
+
+    // Validate ID
+    const validation = validateLogId(id);
+
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const log = logOperations.getById.get({ id: validation.value });
 
     if (!log) {
       return res.status(404).json({ error: 'Log not found' });
@@ -135,7 +155,15 @@ export function getLogById(req, res) {
 export function deleteLog(req, res) {
   try {
     const { id } = req.params;
-    const info = logOperations.deleteById.run({ id: parseInt(id) });
+
+    // Validate ID
+    const validation = validateLogId(id);
+
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const info = logOperations.deleteById.run({ id: validation.value });
 
     if (info.changes === 0) {
       return res.status(404).json({ error: 'Log not found' });
@@ -155,12 +183,20 @@ export function deleteLog(req, res) {
 export function cleanupOldLogs(req, res) {
   try {
     const { days } = req.params;
-    const info = logOperations.deleteOlderThan.run({ days: `-${days}` });
+
+    // Validate days parameter
+    const validation = validateDaysParam(days);
+
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const info = logOperations.deleteOlderThan.run({ days: `-${validation.value}` });
 
     res.json({
       success: true,
       deleted: info.changes,
-      message: `Deleted ${info.changes} log entries older than ${days} days`
+      message: `Deleted ${info.changes} log entries older than ${validation.value} days`
     });
   } catch (error) {
     console.error('Error cleaning up logs:', error);
@@ -173,8 +209,14 @@ export function bulkCreateLogs(req, res) {
   try {
     const { logs } = req.body;
 
-    if (!Array.isArray(logs)) {
-      return res.status(400).json({ error: 'logs must be an array' });
+    // Validate bulk logs
+    const bulkValidation = validateBulkLogs(logs);
+
+    if (!bulkValidation.isValid) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: bulkValidation.errors
+      });
     }
 
     let successCount = 0;
@@ -182,14 +224,25 @@ export function bulkCreateLogs(req, res) {
 
     logs.forEach((log, index) => {
       try {
-        logOperations.create.run({
+        // Validate each log entry
+        const validation = validateLogEntry({
           timestamp: log.timestamp,
           action: log.action,
-          jobTitle: log.jobTitle || null,
-          company: log.company || null,
-          details: log.details || null,
+          jobTitle: log.jobTitle,
+          company: log.company,
+          details: log.details,
           username: log.username
         });
+
+        if (!validation.isValid) {
+          errors.push({
+            index,
+            errors: validation.errors
+          });
+          return;
+        }
+
+        logOperations.create.run(validation.sanitized);
         successCount++;
       } catch (error) {
         errors.push({ index, error: error.message });
