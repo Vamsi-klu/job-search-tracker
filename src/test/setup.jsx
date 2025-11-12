@@ -35,8 +35,43 @@ vi.mock('framer-motion', () => {
       h3: createMotionComponent('h3'),
       p: createMotionComponent('p'),
       input: createMotionComponent('input'),
+      header: createMotionComponent('header'),
     },
     AnimatePresence: ({ children }) => children,
+  }
+})
+
+// Mock lucide-react icons
+vi.mock('lucide-react', () => {
+  const createIcon = (name) => {
+    return ({ className, ...props }) =>
+      React.createElement('svg', {
+        'data-icon': name,
+        className,
+        ...props
+      })
+  }
+
+  return {
+    Plus: createIcon('plus'),
+    LogOut: createIcon('logout'),
+    Sun: createIcon('sun'),
+    Moon: createIcon('moon'),
+    Sparkles: createIcon('sparkles'),
+    Search: createIcon('search'),
+    Building2: createIcon('building2'),
+    User: createIcon('user'),
+    Briefcase: createIcon('briefcase'),
+    Edit: createIcon('edit'),
+    Trash2: createIcon('trash2'),
+    CheckCircle: createIcon('check-circle'),
+    Circle: createIcon('circle'),
+    Clock: createIcon('clock'),
+    X: createIcon('x'),
+    TrendingUp: createIcon('trending-up'),
+    Send: createIcon('send'),
+    Loader: createIcon('loader'),
+    Lock: createIcon('lock'),
   }
 })
 
