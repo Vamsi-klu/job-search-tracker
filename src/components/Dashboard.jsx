@@ -10,6 +10,7 @@ import { logsAPI } from '../services/api'
 import CelebrationOverlay from './CelebrationOverlay'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
+import { useDebounce } from '../hooks/useDebounce'
 
 const jobTemplate = {
   company: '',
@@ -288,7 +289,10 @@ const Dashboard = ({ onLogout, onHandlersReady }) => {
     }
   }, [onHandlersReady, handleDeleteJob, handleUpdateJobStatus])
 
-  const normalizedQuery = searchQuery.trim().toLowerCase()
+  // Debounce search query for better performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+  const normalizedQuery = debouncedSearchQuery.trim().toLowerCase()
   const filteredJobs = normalizedQuery
     ? jobs.filter(job =>
         [
