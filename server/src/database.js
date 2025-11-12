@@ -11,7 +11,7 @@ const dbPath = process.env.NODE_ENV === 'test'
   ? path.join(__dirname, '../test-logs.db')
   : path.join(__dirname, '../logs.db');
 
-const db = new Database(dbPath, { verbose: console.log });
+const db = new Database(dbPath);
 
 // Enable WAL mode for better concurrent access
 db.pragma('journal_mode = WAL');
@@ -41,11 +41,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at);
 `);
 
-console.log('Database initialized successfully');
-
 // Export initialization function for explicit re-initialization if needed
 export function initializeDatabase() {
-  console.log('Database already initialized');
+  // Database is initialized on module load
 }
 
 // Log operations
