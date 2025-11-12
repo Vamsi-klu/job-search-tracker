@@ -9,6 +9,109 @@ async function handleResponse(response) {
   return response.json();
 }
 
+// Jobs API - NEW OPTIMIZED DATABASE ENDPOINTS
+export const jobsAPI = {
+  // Create a new job
+  async create(jobData) {
+    const response = await fetch(`${API_BASE_URL}/jobs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(jobData),
+    });
+    return handleResponse(response);
+  },
+
+  // Get all jobs with optional filters
+  async getAll(filters = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value);
+      }
+    });
+
+    const url = `${API_BASE_URL}/jobs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await fetch(url);
+    return handleResponse(response);
+  },
+
+  // Get a single job by ID
+  async getById(id, username) {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}?username=${username}`);
+    return handleResponse(response);
+  },
+
+  // Update a job
+  async update(id, jobData) {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(jobData),
+    });
+    return handleResponse(response);
+  },
+
+  // Delete a job
+  async delete(id, username) {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}?username=${username}`, {
+      method: 'DELETE',
+    });
+    return handleResponse(response);
+  },
+
+  // Get job statistics
+  async getStats(username) {
+    const response = await fetch(`${API_BASE_URL}/jobs/stats?username=${username}`);
+    return handleResponse(response);
+  },
+
+  // Search jobs
+  async search(query, username) {
+    return this.getAll({ search: query, username });
+  },
+
+  // Get jobs by decision
+  async getByDecision(decision, username) {
+    return this.getAll({ decision, username });
+  },
+
+  // Get paginated jobs
+  async getPaginated(username, limit, offset) {
+    return this.getAll({ username, limit, offset });
+  },
+};
+
+// Migration API - Migrate from localStorage to database
+export const migrationAPI = {
+  // Migrate jobs from localStorage
+  async migrateJobs(jobs, username) {
+    const response = await fetch(`${API_BASE_URL}/migrate/jobs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobs, username }),
+    });
+    return handleResponse(response);
+  },
+
+  // Migrate logs from localStorage
+  async migrateLogs(logs, username) {
+    const response = await fetch(`${API_BASE_URL}/migrate/logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ logs, username }),
+    });
+    return handleResponse(response);
+  },
+};
+
 // Logs API
 export const logsAPI = {
   // Create a new log entry
