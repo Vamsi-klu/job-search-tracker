@@ -3,23 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { authAPI } from './services/api'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const user = localStorage.getItem('jobTracker_user')
-    if (user) {
+    // Check if user is already authenticated (has valid token)
+    const hasToken = authAPI.isAuthenticated()
+    if (hasToken) {
       setIsAuthenticated(true)
     }
     setIsLoading(false)
+
+    // Listen for auth:required event (dispatched on 401 responses)
+    const handleAuthRequired = () => {
+      setIsAuthenticated(false)
+    }
+
+    window.addEventListener('auth:required', handleAuthRequired)
+
+    return () => {
+      window.removeEventListener('auth:required', handleAuthRequired)
+    }
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('jobTracker_user')
-    setIsAuthenticated(false)
+  const handleLogout = async () => {
+    try {
+      await authAPI.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setIsAuthenticated(false)
+    }
   }
 
   if (isLoading) {
