@@ -102,15 +102,16 @@ const AISummary = ({
         }
 
         if (companyLogs.length > 0) {
-          summary += `### Recent Activity (${companyLogs.length} updates)\n\n`
+          summary += `### Latest Activity (${companyLogs.length} total updates)\n\n`
 
+          // Show the 5 most recent logs (already sorted by timestamp descending)
           const recentLogs = companyLogs.slice(0, 5)
           recentLogs.forEach((log, idx) => {
             summary += `${idx + 1}. **${formatDate(log.timestamp)}** - ${log.details}\n`
           })
 
           if (companyLogs.length > 5) {
-            summary += `\n*...and ${companyLogs.length - 5} more updates*\n`
+            summary += `\n*...and ${companyLogs.length - 5} older updates*\n`
           }
 
           const lastLog = companyLogs[0]
