@@ -8,35 +8,39 @@ import {
   cleanupOldLogs,
   bulkCreateLogs
 } from '../controllers/logsController.js';
+import { authenticateToken } from '../middleware/auth.js';
 import {
-  validateCreateLog,
+  validateLog,
   validateBulkLogs,
-  validateLogQuery,
   validateId,
-  validateCleanup
+  validateDays,
+  handleValidationErrors
 } from '../middleware/validation.js';
 
 const router = express.Router();
 
-// Create a new log entry
-router.post('/', validateCreateLog, createLog);
-
-// Bulk create logs (for migration)
-router.post('/bulk', validateBulkLogs, bulkCreateLogs);
-
-// Get all logs (supports query parameters for filtering)
-router.get('/', validateLogQuery, getLogs);
+// All routes require authentication
+router.use(authenticateToken);
 
 // Get log statistics
 router.get('/stats', getLogStats);
 
+// Get all logs (supports query parameters for filtering)
+router.get('/', getLogs);
+
 // Get a specific log by ID
-router.get('/:id', validateId, getLogById);
+router.get('/:id', validateId, handleValidationErrors, getLogById);
+
+// Create a new log entry
+router.post('/', validateLog, handleValidationErrors, createLog);
+
+// Bulk create logs (for migration)
+router.post('/bulk', validateBulkLogs, handleValidationErrors, bulkCreateLogs);
 
 // Delete a log by ID
-router.delete('/:id', validateId, deleteLog);
+router.delete('/:id', validateId, handleValidationErrors, deleteLog);
 
 // Cleanup old logs
-router.delete('/cleanup/:days', validateCleanup, cleanupOldLogs);
+router.delete('/cleanup/:days', validateDays, handleValidationErrors, cleanupOldLogs);
 
 export default router;

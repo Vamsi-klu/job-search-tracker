@@ -1,22 +1,17 @@
 import express from 'express';
-import {
-  register,
-  login,
-  logout,
-  getCurrentUser,
-  changePassword
-} from '../controllers/authController.js';
-import { authenticate } from '../middleware/auth.js';
+import { body } from 'express-validator';
+import { register, login } from '../controllers/authController.js';
+import { handleValidationErrors } from '../middleware/validation.js';
 
 const router = express.Router();
 
-// Public routes
-router.post('/register', register);
-router.post('/login', login);
+const authValidation = [
+  body('username').trim().isLength({ min: 3, max: 50 }).isAlphanumeric().escape(),
+  body('password').isLength({ min: 6, max: 100 }),
+  handleValidationErrors
+];
 
-// Protected routes (require authentication)
-router.post('/logout', authenticate, logout);
-router.get('/me', authenticate, getCurrentUser);
-router.post('/change-password', authenticate, changePassword);
+router.post('/register', authValidation, register);
+router.post('/login', authValidation, login);
 
 export default router;

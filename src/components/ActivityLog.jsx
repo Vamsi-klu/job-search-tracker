@@ -1,7 +1,8 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { X, Clock, TrendingUp, Edit, Trash2, Plus } from 'lucide-react'
 
-const ActivityLog = ({ logs, jobs, onClose, theme }) => {
+const ActivityLog = memo(({ logs, onClose, theme }) => {
   const getActionIcon = (action) => {
     switch (action) {
       case 'created':
@@ -245,6 +246,6 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
       </motion.div>
     </motion.div>
   )
-}
+})
 
 export default ActivityLog

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, LogOut, Sun, Moon, Sparkles, Search, HelpCircle } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
@@ -33,10 +33,12 @@ const normalizeJob = (job = {}) => ({
   ...job
 })
 
-const humanizeField = (field) =>
-  field
+const humanizeField = (field) => {
+  return field
     .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (char) => char.toUpperCase())
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim()
+}
 
 const Dashboard = ({ onLogout, onHandlersReady }) => {
   const { theme, toggleTheme } = useTheme()
@@ -292,21 +294,23 @@ const Dashboard = ({ onLogout, onHandlersReady }) => {
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
-  const normalizedQuery = debouncedSearchQuery.trim().toLowerCase()
-  const filteredJobs = normalizedQuery
-    ? jobs.filter(job =>
-        [
-          job.company,
-          job.position,
-          job.recruiterName,
-          job.hiringManager,
-          job.notes,
-          job.hiringManagerNotes
-        ]
-          .filter(Boolean)
-          .some(value => value.toLowerCase().includes(normalizedQuery))
-      )
-    : jobs
+  const filteredJobs = useMemo(() => {
+    const normalizedQuery = debouncedSearchQuery.trim().toLowerCase()
+    return normalizedQuery
+      ? jobs.filter(job =>
+          [
+            job.company,
+            job.position,
+            job.recruiterName,
+            job.hiringManager,
+            job.notes,
+            job.hiringManagerNotes
+          ]
+            .filter(Boolean)
+            .some(value => value.toLowerCase().includes(normalizedQuery))
+        )
+      : jobs
+  }, [jobs, debouncedSearchQuery])
 
   const username = localStorage.getItem('jobTracker_user')
 
