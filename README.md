@@ -11,6 +11,7 @@ A beautiful, animated job search tracking application built with React, Vite, Ta
 
 ### 🎨 Beautiful UI with Animations
 - **Framer Motion animations** for smooth interactions
+- Celebratory/responsive status animations for success/failure states
 - **Dark Theme** and **Light Theme** support
 - Glass morphism effects
 - Smooth transitions and hover effects
@@ -20,6 +21,7 @@ A beautiful, animated job search tracking application built with React, Vite, Ta
 Track your job applications with detailed fields:
 - **Company Name**
 - **Recruiter Name**
+- **Hiring Manager + dedicated notes**
 - **Position Title**
 - **Recruiter Screen** (Not Started, In Progress, Completed, Rejected)
 - **Technical Screen** (Not Started, In Progress, Completed, Rejected)
@@ -32,6 +34,7 @@ Track your job applications with detailed fields:
 - Timestamps for every action
 - User attribution
 - Complete history tracking
+- Metadata-rich entries (status updates, candidate notes, hiring manager notes)
 - Beautiful timeline view
 
 ### 🤖 AI Summary
@@ -62,6 +65,14 @@ Track your job applications with detailed fields:
 - **SQLite** - Database for logs
 - **better-sqlite3** - SQLite library
 - **CORS** - Cross-origin resource sharing
+
+### 🗃️ Backend Data Model
+
+- `users` table keeps one row per authenticated user (normalized lookups, indexed by username).
+- `jobs` table stores the authoritative copy of company/title metadata for each tracked job ID.
+- Hiring manager contact + notes are synced into the jobs table and snapshotted with each log entry for historical accuracy.
+- `log_entries` table records every activity with foreign keys to `users`/`jobs`, snapshot columns for denormalized reads, JSON metadata, and multi-column indexes (`user_id + created_at`, `job_id + created_at`, `action + created_at`) for low-latency queries.
+- SQLite runs in **WAL mode** with tuned pragmas (reduced sync cost, large page cache, in-memory temp tables) so high-volume inserts and filters stay sub‑millisecond on modest hardware.
 
 ## 🚀 Getting Started
 
@@ -172,7 +183,7 @@ npm run preview
 ## 💾 Data Storage
 
 - **Jobs**: Stored in browser's localStorage
-- **Activity Logs**: Stored in SQLite database via backend API
+- **Activity Logs**: Persisted in SQLite via the backend (`users`, `jobs`, `log_entries` tables with JSON metadata + composite indexes)
 - **User Data**: Stored in localStorage (password, username, theme)
 
 LocalStorage keys:
@@ -220,8 +231,14 @@ Content-Type: application/json
   "action": "created",
   "jobTitle": "Software Engineer",
   "company": "Tech Corp",
+  "hiringManager": "Alex Hiring",
   "details": "New job application added",
-  "username": "john_doe"
+  "jobId": "1731183000000",
+  "username": "john_doe",
+  "metadata": {
+    "field": "recruiterScreen",
+    "value": "Completed"
+  }
 }
 ```
 
@@ -237,6 +254,9 @@ GET /api/logs?action=created
 
 # Filter by company
 GET /api/logs?company=Tech Corp
+
+# Filter by job ID
+GET /api/logs?jobId=1731183000000
 
 # Search logs
 GET /api/logs?search=engineer
@@ -275,18 +295,32 @@ Content-Type: application/json
 
 ### Database Schema
 
-**Logs Table:**
-- `id` (INTEGER, PRIMARY KEY)
-- `timestamp` (TEXT, ISO format)
-- `action` (TEXT: created, updated, deleted, status_update)
-- `job_title` (TEXT)
-- `company` (TEXT)
-- `details` (TEXT)
-- `username` (TEXT)
-- `created_at` (TEXT, auto-generated)
+**users**
+- `id` (INTEGER, PK)
+- `username` (TEXT, UNIQUE, indexed)
+- `created_at` (INTEGER epoch)
 
-**Indexes:**
-- timestamp, action, company, username, created_at
+**jobs**
+- `id` (TEXT, PK — matches frontend job id)
+- `title` (TEXT)
+- `company` (TEXT)
+- `recruiter_name` (TEXT)
+- `hiring_manager` (TEXT)
+- `created_at` / `updated_at` (INTEGER epoch)
+
+**log_entries**
+- `id` (INTEGER, PK)
+- `job_id` (TEXT, FK → jobs.id, nullable)
+- `user_id` (INTEGER, FK → users.id)
+- `action` (TEXT enum: created/updated/deleted/status_update)
+- `details` (TEXT)
+- `metadata` (TEXT storing JSON payload)
+- `company_snapshot` / `job_title_snapshot` / `hiring_manager_snapshot` (TEXT fallbacks)
+- `created_at` (INTEGER epoch)
+
+**Indexes**
+- Composite: `(user_id, created_at DESC)`, `(job_id, created_at DESC)`, `(action, created_at DESC)`
+- Single-column: `created_at DESC` (covering scans for recent activity)
 
 ### JavaScript API Usage
 
@@ -300,7 +334,10 @@ await logsAPI.create({
   jobTitle: 'Developer',
   company: 'Tech Corp',
   details: 'New application',
-  username: 'john_doe'
+  hiringManager: 'Jane Hiring',
+  jobId: '1731183000000',
+  username: 'john_doe',
+  metadata: { field: 'technicalScreen', value: 'In Progress' }
 });
 
 // Get all logs

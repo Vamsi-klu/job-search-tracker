@@ -1,22 +1,35 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 
+const defaultFormState = {
+  company: '',
+  recruiterName: '',
+  hiringManager: '',
+  position: '',
+  recruiterScreen: 'Not Started',
+  technicalScreen: 'Not Started',
+  onsiteRound1: 'Not Started',
+  onsiteRound2: 'Not Started',
+  onsiteRound3: 'Not Started',
+  onsiteRound4: 'Not Started',
+  decision: 'Pending',
+  notes: '',
+  hiringManagerNotes: ''
+}
+
 const JobForm = ({ job, onSave, onClose, theme }) => {
-  const [formData, setFormData] = useState(job || {
-    company: '',
-    recruiterName: '',
-    hiringManager: '',
-    position: '',
-    recruiterScreen: 'Not Started',
-    technicalScreen: 'Not Started',
-    onsiteRound1: 'Not Started',
-    onsiteRound2: 'Not Started',
-    onsiteRound3: 'Not Started',
-    onsiteRound4: 'Not Started',
-    decision: 'Pending',
-    notes: ''
-  })
+  const [formData, setFormData] = useState(() => ({
+    ...defaultFormState,
+    ...(job || {})
+  }))
+
+  useEffect(() => {
+    setFormData({
+      ...defaultFormState,
+      ...(job || {})
+    })
+  }, [job])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -34,6 +47,7 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
+      data-testid="job-form-overlay"
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
@@ -43,6 +57,7 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
         className={`${
           theme === 'dark' ? 'bg-dark-card' : 'bg-white'
         } rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+        data-testid="job-form-modal"
       >
         {/* Header */}
         <div className={`sticky top-0 ${
@@ -151,6 +166,25 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
                 placeholder="Enter hiring manager name"
               />
             </div>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-2 ${
+              theme === 'dark' ? 'text-dark-text' : 'text-light-text'
+            }`}>
+              Hiring Manager
+            </label>
+            <input
+              type="text"
+              value={formData.hiringManager}
+              onChange={(e) => handleChange('hiringManager', e.target.value)}
+              className={`w-full px-4 py-3 rounded-lg ${
+                theme === 'dark'
+                  ? 'bg-dark-bg text-dark-text border-dark-border'
+                  : 'bg-light-bg text-light-text border-light-border'
+              } border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all`}
+              placeholder="Who is the hiring manager?"
+            />
           </div>
 
           {/* Interview Stages */}
@@ -264,18 +298,37 @@ const JobForm = ({ job, onSave, onClose, theme }) => {
             <label className={`block text-sm font-semibold mb-2 ${
               theme === 'dark' ? 'text-dark-text' : 'text-light-text'
             }`}>
-              Notes
+              Candidate Notes
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
+              rows={5}
+              className={`w-full px-4 py-3 rounded-lg ${
+                theme === 'dark'
+                  ? 'bg-dark-bg text-dark-text border-dark-border'
+                  : 'bg-light-bg text-light-text border-light-border'
+              } border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none min-h-[130px]`}
+              placeholder="Pipeline context, reminders, preparation steps..."
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-2 ${
+              theme === 'dark' ? 'text-dark-text' : 'text-light-text'
+            }`}>
+              Hiring Manager Notes
+            </label>
+            <textarea
+              value={formData.hiringManagerNotes}
+              onChange={(e) => handleChange('hiringManagerNotes', e.target.value)}
               rows={4}
               className={`w-full px-4 py-3 rounded-lg ${
                 theme === 'dark'
                   ? 'bg-dark-bg text-dark-text border-dark-border'
                   : 'bg-light-bg text-light-text border-light-border'
               } border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none`}
-              placeholder="Add any additional notes..."
+              placeholder="Feedback directly from the hiring manager, next steps, etc."
             />
           </div>
 

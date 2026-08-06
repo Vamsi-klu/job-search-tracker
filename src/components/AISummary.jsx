@@ -2,7 +2,35 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Sparkles, Send, Loader } from 'lucide-react'
 
-const AISummary = ({ logs, jobs, onClose, theme }) => {
+const normalizeText = (value = '') => value.trim().toLowerCase()
+
+const humanizeKey = (key = '') =>
+  key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/_/g, ' ')
+    .replace(/^./, (char) => char.toUpperCase())
+
+const formatDate = (timestamp, options = {}) =>
+  new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...options
+  })
+
+const sortLogsDesc = (logList = []) =>
+  [...logList].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+
+const AISummary = ({
+  logs,
+  jobs,
+  onClose,
+  theme,
+  onSummaryComplete,
+  summaryDelay = 1000
+}) => {
   const [query, setQuery] = useState('')
   const [response, setResponse] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -12,29 +40,31 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
 
     // Simulate AI processing
     setTimeout(() => {
-      const lowerQuery = searchQuery.toLowerCase()
+      const lowerQuery = normalizeText(searchQuery)
 
-      // Find relevant company
-      const companyMatch = jobs.find(job =>
-        job.company.toLowerCase().includes(lowerQuery) ||
-        lowerQuery.includes(job.company.toLowerCase())
-      )
+      const findCompanyMatch = () => {
+        const exact = jobs.find(job => normalizeText(job.company) === lowerQuery)
+        if (exact) return exact
+        return jobs.find(job => {
+          const company = normalizeText(job.company)
+          return company.includes(lowerQuery) || lowerQuery.includes(company)
+        })
+      }
+
+      const companyMatch = findCompanyMatch()
 
       if (companyMatch) {
-        // Filter and sort logs by timestamp (most recent first)
-        const companyLogs = logs
-          .filter(log =>
-            log.company.toLowerCase() === companyMatch.company.toLowerCase()
+        const companyLogs = sortLogsDesc(
+          logs.filter(log =>
+            log.jobId === companyMatch.id ||
+            normalizeText(log.company || '') === normalizeText(companyMatch.company)
           )
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        )
 
         let summary = `## Summary for ${companyMatch.company}\n\n`
         summary += `**Position:** ${companyMatch.position}\n`
-        summary += `**Recruiter:** ${companyMatch.recruiterName}\n`
-        if (companyMatch.hiringManager) {
-          summary += `**Hiring Manager:** ${companyMatch.hiringManager}\n`
-        }
-        summary += `\n`
+        summary += `**Recruiter:** ${companyMatch.recruiterName || '—'}\n`
+        summary += `**Hiring Manager:** ${companyMatch.hiringManager || 'Not assigned'}\n\n`
         summary += `### Current Status\n`
         summary += `- **Recruiter Screen:** ${companyMatch.recruiterScreen}\n`
         summary += `- **Technical Screen:** ${companyMatch.technicalScreen}\n`
@@ -43,9 +73,32 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         summary += `- **On-site Round 3:** ${companyMatch.onsiteRound3}\n`
         summary += `- **On-site Round 4:** ${companyMatch.onsiteRound4}\n`
         summary += `- **Decision:** ${companyMatch.decision}\n\n`
+        summary += `**Key Highlights**\n`
 
-        if (companyMatch.notes) {
-          summary += `### Notes\n${companyMatch.notes}\n\n`
+        const noteLines = []
+        if (companyMatch.notes?.trim()) {
+          noteLines.push(`- **Candidate Notes:** ${companyMatch.notes.trim()}`)
+        }
+        if (companyMatch.hiringManagerNotes?.trim()) {
+          noteLines.push(`- **Hiring Manager Notes:** ${companyMatch.hiringManagerNotes.trim()}`)
+        }
+
+        const noteLogs = companyLogs.filter(log =>
+          log.metadata?.notes || log.metadata?.hiringManagerNotes
+        )
+        if (noteLogs.length) {
+          const latestNoteLog = noteLogs[0]
+          Object.entries(latestNoteLog.metadata).forEach(([key, value]) => {
+            if (value && key.toLowerCase().includes('notes')) {
+              noteLines.unshift(
+                `- **${humanizeKey(key)} (${formatDate(latestNoteLog.timestamp)}):** ${value}`
+              )
+            }
+          })
+        }
+
+        if (noteLines.length) {
+          summary += `### Latest Notes\n${noteLines.join('\n')}\n\n`
         }
 
         if (companyLogs.length > 0) {
@@ -54,41 +107,30 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
           // Show the 5 most recent logs (already sorted by timestamp descending)
           const recentLogs = companyLogs.slice(0, 5)
           recentLogs.forEach((log, idx) => {
-            const date = new Date(log.timestamp).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-            summary += `${idx + 1}. **${date}** - ${log.details}\n`
+            summary += `${idx + 1}. **${formatDate(log.timestamp)}** - ${log.details}\n`
           })
 
           if (companyLogs.length > 5) {
             summary += `\n*...and ${companyLogs.length - 5} older updates*\n`
           }
 
-          // Most recent update (first in sorted array)
           const lastLog = companyLogs[0]
-          const lastUpdateDate = new Date(lastLog.timestamp).toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-          summary += `\n### Most Recent Update\n`
-          summary += `${lastUpdateDate} by ${lastLog.username}\n`
+          summary += `\n### Last Updated\n`
+          summary += `${formatDate(lastLog.timestamp, { month: 'long', day: 'numeric', year: 'numeric' })} by ${lastLog.username}\n`
           summary += `**Action:** ${lastLog.details}`
         } else {
           summary += `### Activity\nNo updates recorded yet for this application.`
         }
 
         setResponse(summary)
+        onSummaryComplete?.()
       } else if (lowerQuery.includes('summary') || lowerQuery.includes('overview')) {
         // General summary
+        const sortedLogs = sortLogsDesc(logs)
         let summary = `## Overall Job Search Summary\n\n`
         summary += `**Total Applications:** ${jobs.length}\n`
         summary += `**Total Activities:** ${logs.length}\n\n`
+        summary += `**Highlights**\n`
 
         summary += `### Application Status Breakdown\n`
         const statusCounts = {
@@ -116,29 +158,46 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
         summary += `\n### Recent Companies\n`
         const recentJobs = [...jobs].slice(-5).reverse()
         recentJobs.forEach((job, idx) => {
-          summary += `${idx + 1}. **${job.company}** - ${job.position} (${job.decision})\n`
+          summary += `${idx + 1}. **${job.company}** - ${job.position} (${job.decision})`
+          if (job.hiringManager) {
+            summary += ` • Hiring Manager: ${job.hiringManager}`
+          }
+          summary += '\n'
         })
 
         summary += `\n### Most Active Companies\n`
         const companyCounts = {}
         logs.forEach(log => {
+          if (!log.company) return
           companyCounts[log.company] = (companyCounts[log.company] || 0) + 1
         })
         const sortedCompanies = Object.entries(companyCounts)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 3)
 
-        sortedCompanies.forEach(([company, count], idx) => {
-          summary += `${idx + 1}. **${company}** - ${count} updates\n`
-        })
+        if (sortedCompanies.length) {
+          sortedCompanies.forEach(([company, count], idx) => {
+            summary += `${idx + 1}. **${company}** - ${count} updates\n`
+          })
+        } else {
+          summary += 'No logged activity yet.\n'
+        }
+
+        if (sortedLogs.length) {
+          summary += `\n### Latest Activity\n`
+          sortedLogs.slice(0, 5).forEach((log, idx) => {
+            summary += `${idx + 1}. ${formatDate(log.timestamp)} — ${log.company}: ${log.details}\n`
+          })
+        }
 
         setResponse(summary)
+        onSummaryComplete?.()
       } else {
         setResponse(`I couldn't find specific information about "${searchQuery}".\n\nTry asking:\n- "What's the status for [company name]?"\n- "Give me an overview"\n- "Summary of my applications"\n- "What's the latest on [company name]?"`)
       }
 
       setIsLoading(false)
-    }, 1000)
+    }, summaryDelay)
   }
 
   const handleSubmit = (e) => {
@@ -161,6 +220,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
+      data-testid="ai-summary-overlay"
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
@@ -189,6 +249,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             onClick={onClose}
+            aria-label="Close AI summary"
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
           >
             <X className="text-white" />
@@ -331,6 +392,7 @@ const AISummary = ({ logs, jobs, onClose, theme }) => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               disabled={isLoading || !query.trim()}
+              aria-label="Submit summary query"
               className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-5 h-5" />

@@ -1,7 +1,8 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { X, Clock, TrendingUp, Edit, Trash2, Plus } from 'lucide-react'
 
-const ActivityLog = ({ logs, jobs, onClose, theme }) => {
+const ActivityLog = memo(({ logs, onClose, theme }) => {
   const getActionIcon = (action) => {
     switch (action) {
       case 'created':
@@ -61,6 +62,7 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
+      data-testid="activity-log-overlay"
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
@@ -70,6 +72,7 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
         className={`${
           theme === 'dark' ? 'bg-dark-card' : 'bg-white'
         } rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col`}
+        data-testid="activity-log-modal"
       >
         {/* Header */}
         <div className={`${
@@ -119,6 +122,7 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                   className="relative"
+                  data-testid={`activity-log-entry-${log.id}`}
                 >
                   {/* Timeline line */}
                   {index !== logs.length - 1 && (
@@ -155,6 +159,25 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
                           }`}>
                             {log.details}
                           </p>
+                          {log.metadata && (
+                            <div className={`mt-2 text-xs flex flex-wrap gap-2 ${
+                              theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
+                            }`}>
+                              {Object.entries(log.metadata).map(([key, value]) => (
+                                <span
+                                  key={key}
+                                  className={`px-2 py-0.5 rounded-full ${
+                                    theme === 'dark' ? 'bg-dark-card' : 'bg-white/70'
+                                  } border ${
+                                    theme === 'dark' ? 'border-dark-border' : 'border-light-border'
+                                  } text-left break-words`}
+                                >
+                                  <strong className="mr-1">{key}:</strong>
+                                  {String(value)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <span className={`text-xs ${
                           theme === 'dark' ? 'text-dark-muted' : 'text-light-muted'
@@ -223,6 +246,6 @@ const ActivityLog = ({ logs, jobs, onClose, theme }) => {
       </motion.div>
     </motion.div>
   )
-}
+})
 
 export default ActivityLog
