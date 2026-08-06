@@ -1,0 +1,25 @@
+{
+  "testEnvironment": "node",
+  "transform": {},
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
+  "testMatch": [
+    "**/__tests__/**/*.test.js"
+  ],
+  "collectCoverageFrom": [
+    "src/middleware/auth.js",
+    "src/controllers/authController.js",
+    "src/routes/auth.js",
+    "!**/node_modules/**"
+  ],
+  "coverageThreshold": {
+    "global": {
+      "branches": 60,
+      "functions": 65,
+      "lines": 60,
+      "statements": 60
+    }
+  },
+  "coverageReporters": ["text", "lcov", "html"]
+}

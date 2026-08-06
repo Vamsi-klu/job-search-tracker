@@ -69,6 +69,9 @@ function runMigrations() {
   ensureColumn('jobs', 'hiring_manager', 'TEXT');
   ensureColumn('log_entries', 'hiring_manager_snapshot', 'TEXT');
 
+  // Add password_hash column for authentication
+  ensureColumn('users', 'password_hash', 'TEXT');
+
   // Legacy table migration (pre multi-table schema)
   const hasLegacy = db
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='logs'")
